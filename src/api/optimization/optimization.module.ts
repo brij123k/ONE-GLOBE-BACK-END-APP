@@ -1,0 +1,41 @@
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+
+import { OptimizationController } from './optimization.controller';
+import { OptimizationService } from './optimization.service';
+
+import {
+  OptimizedTitle,
+  OptimizedTitleSchema,
+} from 'src/schema/title/optimized-title.schema';
+
+import {
+  OptimizedDescription,
+  OptimizedDescriptionSchema,
+} from 'src/schema/descriptions/optimized-description.schema';
+import { Shop, ShopSchema } from 'src/schema/shop.schema';
+import { AuthModule } from '../auth/auth.module';
+import { ShopifyModule } from 'src/common/shopify/shopify.module';
+import { ClassicTitleOptimized, ClassicTitleOptimizedSchema } from 'src/schema/title/classic-title-optimized.schema';
+import { ClassicDescriptionOptimized, ClassicDescriptionOptimizedSchema } from 'src/schema/descriptions/classic-description-optimized.schema';
+import { AiService } from 'src/config/ai.service';
+
+@Module({
+  imports: [
+    AuthModule,
+    ShopifyModule,
+    MongooseModule.forFeature([
+      { name: Shop.name, schema: ShopSchema },
+    ]),
+    MongooseModule.forFeature([
+      { name: OptimizedTitle.name, schema: OptimizedTitleSchema },
+      { name: OptimizedDescription.name, schema: OptimizedDescriptionSchema },
+      { name: ClassicTitleOptimized.name, schema: ClassicTitleOptimizedSchema },
+      { name: ClassicDescriptionOptimized.name, schema: ClassicDescriptionOptimizedSchema },
+    ]),
+  ],
+  controllers: [OptimizationController],
+  providers: [OptimizationService,AiService],
+  exports: [OptimizationService,AiService],
+})
+export class OptimizationModule {}

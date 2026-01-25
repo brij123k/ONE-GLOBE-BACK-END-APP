@@ -1,0 +1,276 @@
+import axios from 'axios';
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+
+import { OptimizedDescription } from 'src/schema/descriptions/optimized-description.schema';
+import { StoreOptimizationDto } from 'src/dto/store-optimization.dto';
+import { Shop } from 'src/schema/shop.schema';
+import { OptimizedTitle } from 'src/schema/title/optimized-title.schema';
+import { PRODUCT_BY_ID_QUERY } from 'src/graphql/product-by-id.query';
+import { ApplyTitleOptimizationDto } from 'src/dto/title/apply-title-optimization.dto';
+import { UPDATE_PRODUCT_TITLE_MUTATION } from 'src/graphql/update-product-title';
+import { ApplyDescriptionOptimizationDto } from 'src/dto/description/apply-description-optimization.dto';
+import { UPDATE_PRODUCT_DESCRIPTION_MUTATION } from 'src/graphql/update-product-description';
+import { ClassicDescriptionOptimized } from 'src/schema/descriptions/classic-description-optimized.schema';
+import { ClassicTitleOptimized } from 'src/schema/title/classic-title-optimized.schema';
+import { ShopifyService } from 'src/common/shopify/shopify.service';
+import { AITitleOptimizationDto } from 'src/dto/title/ai-title-optimization.dto';
+import { PRODUCT_TITLE_AI_QUERY } from 'src/graphql/product-title-ai';
+import { buildTitleAIPrompt } from 'src/common/build-title-ai-prompt';
+import { AiService } from 'src/config/ai.service';
+@Injectable()
+export class OptimizationService {
+    constructor(
+        private readonly shopifyService: ShopifyService,
+        private readonly aiService: AiService,
+        @InjectModel(OptimizedTitle.name)
+        private titleModel: Model<OptimizedTitle>,
+
+        @InjectModel(ClassicTitleOptimized.name)
+        private classicTitleOptimizedModel: Model<ClassicTitleOptimized>,
+
+        @InjectModel(ClassicDescriptionOptimized.name)
+        private classicDescriptionOptimizedModel: Model<ClassicDescriptionOptimized>,
+
+        @InjectModel(OptimizedDescription.name)
+        private descriptionModel: Model<OptimizedDescription>,
+
+        @InjectModel(Shop.name)
+        private shopModel: Model<Shop>,
+    ) { }
+
+    private async fetchProduct(shopDomain: string, token: string, productId: string) {
+        const url = `https://${shopDomain}/admin/api/2026-01/graphql.json`;
+
+        const { data } = await axios.post(
+            url,
+            {
+                query: PRODUCT_BY_ID_QUERY,
+                variables: { id: productId },
+            },
+            {
+                headers: {
+                    'X-Shopify-Access-Token': token,
+                },
+            },
+        );
+
+        return data.data.product;
+    }
+
+    async storeProducts(shopId: string, dto: StoreOptimizationDto) {
+        const shop = await this.shopModel.findById(shopId).lean();
+        if (!shop) throw new Error('Invalid shop');
+
+        // 🔥 STEP 1: DELETE OLD DATA (PER SHOP + SERVICE)
+        if (dto.serviceName === 'title') {
+            await this.titleModel.deleteMany({ shopId });
+        }
+
+        if (dto.serviceName === 'description') {
+            await this.descriptionModel.deleteMany({ shopId });
+        }
+
+        // 🔥 STEP 2: PREPARE BULK INSERT DATA
+        const documents: any[] = [];
+
+        for (const productId of dto.productIds) {
+            const product = await this.fetchProduct(
+                shop.shopDomain,
+                shop.accessToken,
+                productId,
+            );
+
+            if (!product) continue;
+
+            const image =
+                product.featuredMedia?.preview?.image?.url || null;
+
+            if (dto.serviceName === 'title') {
+                documents.push({
+                    shopId,
+                    productId,
+                    productImage: image,
+                    title: product.title,
+                });
+            }
+
+            if (dto.serviceName === 'description') {
+                documents.push({
+                    shopId,
+                    productId,
+                    productImage: image,
+                    description: product.description ||product.title ,
+                    descriptionHtml: product.descriptionHtml || product.title,
+                });
+            }
+        }
+
+        // 🔥 STEP 3: BULK INSERT
+        let inserted: any[] = [];
+
+        if (dto.serviceName === 'title' && documents.length) {
+            inserted = await this.titleModel.insertMany(documents);
+        }
+
+        if (dto.serviceName === 'description' && documents.length) {
+            inserted = await this.descriptionModel.insertMany(documents);
+        }
+
+        // 🔥 STEP 4: RESPONSE
+        return {
+            shopId,
+            serviceName: dto.serviceName,
+            deletedOld: true,
+            insertedCount: inserted.length,
+            products: inserted,
+        };
+    }
+
+
+    async getOptimizedProducts(shopId: string, serviceName: string) {
+        if (serviceName === 'title') {
+            return this.titleModel.find({ shopId }).lean();
+        }
+
+        if (serviceName === 'description') {
+            return this.descriptionModel.find({ shopId }).lean();
+        }
+
+        throw new Error('Invalid service name');
+    }
+
+
+    async applyTitleOptimization(
+        shopId: string,
+        dto: ApplyTitleOptimizationDto,
+    ) {
+        const shop = await this.shopModel.findById(shopId).lean();
+        if (!shop) throw new Error('Invalid shop');
+
+        // 1️⃣ Update Shopify
+        const response = await this.shopifyService.shopifyRequest(
+            shop.shopDomain,
+            shop.accessToken,
+            UPDATE_PRODUCT_TITLE_MUTATION,
+            {
+                input: {
+                    id: dto.productId,
+                    title: dto.newTitle,
+                },
+            },
+        );
+
+        const errors = response.productUpdate.userErrors;
+        if (errors.length) throw errors;
+
+        // 2️⃣ Store optimization reference
+        const product = response.productUpdate.product;
+
+        return this.classicTitleOptimizedModel.create({
+            shopId,
+            productId: dto.productId,
+            oldTitle: dto.oldTitle,
+            newTitle: dto.newTitle,
+        });
+    }
+
+    async applyDescriptionOptimization(
+        shopId: string,
+        dto: ApplyDescriptionOptimizationDto,
+    ) {
+        const shop = await this.shopModel.findById(shopId).lean();
+        if (!shop) throw new Error('Invalid shop');
+
+        // 1️⃣ Update Shopify
+        const response = await this.shopifyService.shopifyRequest(
+            shop.shopDomain,
+            shop.accessToken,
+            UPDATE_PRODUCT_DESCRIPTION_MUTATION,
+            {
+                input: {
+                    id: dto.productId,
+                    descriptionHtml: dto.newDescription,
+                },
+            },
+        );
+
+        const errors = response.productUpdate.userErrors;
+        if (errors.length) throw errors;
+
+        // 2️⃣ Store optimization reference
+        return this.classicDescriptionOptimizedModel.create({
+            shopId,
+            productId: dto.productId,
+            oldDescription: dto.oldDescription,
+            newDescription: dto.newDescription,
+        });
+    }
+
+
+    async generateAITitle(
+        shopId: string,
+        dto: AITitleOptimizationDto,
+    ) {
+        const shop = await this.shopModel.findById(shopId).lean();
+        if (!shop) throw new Error('Invalid shop');
+
+        // 1️⃣ Fetch product
+        const productResponse = await this.shopifyService.shopifyRequest(
+            shop.shopDomain,
+            shop.accessToken,
+            PRODUCT_TITLE_AI_QUERY,
+            { id: dto.productId },
+        );
+
+        const product = productResponse.product;
+        if (!product) throw new Error('Product not found');
+
+        // 2️⃣ Build prompt
+        const prompt = buildTitleAIPrompt(product, dto);
+
+        // 3️⃣ Call Groq AI
+        let aiTitle = await this.aiService.generateTitle(prompt);
+
+        // 4️⃣ Clean AI response
+        aiTitle = aiTitle.replace(/["']/g, '').trim();
+
+        // 5️⃣ Enforce character limits
+        // if (
+        //     aiTitle.length < dto.minCharacters ||
+        //     aiTitle.length > dto.maxCharacters
+        // ) {
+        //     throw new Error('AI title does not meet character constraints');
+        // }
+
+        if (dto.apply === true) {
+    const applied = await this.applyTitleOptimization(shopId, {
+      productId: dto.productId,
+      oldTitle: product.title,
+      newTitle: aiTitle,
+    });
+
+    return {
+      applied: true,
+      productId: dto.productId,
+      oldTitle: product.title,
+      newTitle: aiTitle,
+      characterCount: aiTitle.length,
+      image: product.featuredMedia?.preview?.image?.url || null,
+      optimizationRecordId: applied._id,
+    };
+  }
+
+        return {
+            productId: dto.productId,
+            oldTitle: product.title,
+            newTitle: aiTitle,
+            characterCount: aiTitle.length,
+            image:
+                product.featuredMedia?.preview?.image?.url || null,
+        };
+    }
+
+
+}
