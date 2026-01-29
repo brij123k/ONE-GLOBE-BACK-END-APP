@@ -19,7 +19,8 @@ import { ShopifyModule } from 'src/common/shopify/shopify.module';
 import { ClassicTitleOptimized, ClassicTitleOptimizedSchema } from 'src/schema/title/classic-title-optimized.schema';
 import { ClassicDescriptionOptimized, ClassicDescriptionOptimizedSchema } from 'src/schema/descriptions/classic-description-optimized.schema';
 import { AiService } from 'src/config/ai.service';
-
+import { OptimizedMetaTitle,OptimizedMetaTitleSchema } from 'src/schema/meta-title/optimized-meta-title.schema';
+import { OptimizedMetaDescription, OptimizedMetaDescriptionSchema } from 'src/schema/meta-description/optimized-meta-description.schema';
 @Module({
   imports: [
     AuthModule,
@@ -32,6 +33,8 @@ import { AiService } from 'src/config/ai.service';
       { name: OptimizedDescription.name, schema: OptimizedDescriptionSchema },
       { name: ClassicTitleOptimized.name, schema: ClassicTitleOptimizedSchema },
       { name: ClassicDescriptionOptimized.name, schema: ClassicDescriptionOptimizedSchema },
+      { name: OptimizedMetaTitle.name, schema: OptimizedMetaTitleSchema },
+      { name: OptimizedMetaDescription.name, schema: OptimizedMetaDescriptionSchema },
     ]),
   ],
   controllers: [OptimizationController],

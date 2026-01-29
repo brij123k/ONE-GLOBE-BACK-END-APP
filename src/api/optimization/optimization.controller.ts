@@ -5,6 +5,7 @@ import { StoreOptimizationDto } from 'src/dto/store-optimization.dto';
 import { ApplyTitleOptimizationDto } from 'src/dto/title/apply-title-optimization.dto';
 import { ApplyDescriptionOptimizationDto } from 'src/dto/description/apply-description-optimization.dto';
 import { AITitleOptimizationDto } from 'src/dto/title/ai-title-optimization.dto';
+import { AIDescriptionOptimizationDto } from 'src/dto/description/ai-title-optimization.dto';
 
 @Controller('api/optimization')
 @UseGuards(JwtAuthGuard)
@@ -52,4 +53,15 @@ async aiTitleOptimization(
   const { shopId } = req.user;
   return this.optimizationService.generateAITitle(shopId, dto);
 }
+
+@Post('ai/description')
+async aiDescriptionOptimization(
+  @Req() req,
+  @Body() dto: AIDescriptionOptimizationDto,
+) {
+  const { shopId } = req.user;
+  console.log(shopId)
+  return this.optimizationService.generateAIDescription(shopId, dto);
+}
+
 }

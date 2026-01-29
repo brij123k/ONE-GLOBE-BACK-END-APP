@@ -19,6 +19,12 @@ import { AITitleOptimizationDto } from 'src/dto/title/ai-title-optimization.dto'
 import { PRODUCT_TITLE_AI_QUERY } from 'src/graphql/product-title-ai';
 import { buildTitleAIPrompt } from 'src/common/build-title-ai-prompt';
 import { AiService } from 'src/config/ai.service';
+import { AIDescriptionOptimizationDto } from 'src/dto/description/ai-title-optimization.dto';
+import { buildDescriptionAIPrompt } from 'src/common/buildDescriptionAIPrompt';
+import { PRODUCT_DESCRIPTION_AI_QUERY } from 'src/graphql/product-description-ai';
+import { OptimizedMetaTitle } from 'src/schema/meta-title/optimized-meta-title.schema';
+import { OptimizedMetaDescription } from 'src/schema/meta-description/optimized-meta-description.schema';
+
 @Injectable()
 export class OptimizationService {
     constructor(
@@ -35,6 +41,12 @@ export class OptimizationService {
 
         @InjectModel(OptimizedDescription.name)
         private descriptionModel: Model<OptimizedDescription>,
+
+        @InjectModel(OptimizedMetaTitle.name)
+        private MetaTitleModel: Model<OptimizedMetaTitle>,
+
+        @InjectModel(OptimizedMetaDescription.name)
+        private MetaDescriptionModel: Model<OptimizedMetaDescription>,
 
         @InjectModel(Shop.name)
         private shopModel: Model<Shop>,
@@ -71,6 +83,12 @@ export class OptimizationService {
         if (dto.serviceName === 'description') {
             await this.descriptionModel.deleteMany({ shopId });
         }
+        if (dto.serviceName === 'metaTitle') {
+            await this.MetaTitleModel.deleteMany({ shopId });
+        }
+        if (dto.serviceName === 'metaDescription') {
+            await this.MetaDescriptionModel.deleteMany({ shopId });
+        }
 
         // 🔥 STEP 2: PREPARE BULK INSERT DATA
         const documents: any[] = [];
@@ -81,9 +99,7 @@ export class OptimizationService {
                 shop.accessToken,
                 productId,
             );
-
             if (!product) continue;
-
             const image =
                 product.featuredMedia?.preview?.image?.url || null;
 
@@ -101,8 +117,26 @@ export class OptimizationService {
                     shopId,
                     productId,
                     productImage: image,
-                    description: product.description ||product.title ,
+                    description: product.descriptionHtml ||product.description ,
                     descriptionHtml: product.descriptionHtml || product.title,
+                });
+            }
+            if (dto.serviceName === 'metaTitle') {
+                documents.push({
+                    shopId,
+                    productId,
+                    productImage: image,
+                    title: product.title,
+                    metaTitle: product.seo.title ||product.title ,
+                });
+            }
+            if (dto.serviceName === 'metaDescription') {
+                documents.push({
+                    shopId,
+                    productId,
+                    productImage: image,
+                    description: product.description,
+                    metaDescription: product.seo.description ||product.title ,
                 });
             }
         }
@@ -116,6 +150,12 @@ export class OptimizationService {
 
         if (dto.serviceName === 'description' && documents.length) {
             inserted = await this.descriptionModel.insertMany(documents);
+        }
+        if (dto.serviceName === 'metaTitle' && documents.length) {
+            inserted = await this.MetaTitleModel.insertMany(documents);
+        }
+        if (dto.serviceName === 'metaDescription' && documents.length) {
+            inserted = await this.MetaDescriptionModel.insertMany(documents);
         }
 
         // 🔥 STEP 4: RESPONSE
@@ -136,6 +176,12 @@ export class OptimizationService {
 
         if (serviceName === 'description') {
             return this.descriptionModel.find({ shopId }).lean();
+        }
+        if (serviceName === 'metaTitle') {
+            return this.MetaTitleModel.find({ shopId }).lean();
+        }
+        if (serviceName === 'metaDescription') {
+            return this.MetaDescriptionModel.find({ shopId }).lean();
         }
 
         throw new Error('Invalid service name');
@@ -182,7 +228,7 @@ export class OptimizationService {
     ) {
         const shop = await this.shopModel.findById(shopId).lean();
         if (!shop) throw new Error('Invalid shop');
-
+        console.log(shop,dto)
         // 1️⃣ Update Shopify
         const response = await this.shopifyService.shopifyRequest(
             shop.shopDomain,
@@ -271,6 +317,64 @@ export class OptimizationService {
                 product.featuredMedia?.preview?.image?.url || null,
         };
     }
+
+
+
+async generateAIDescription(
+  shopId: string,
+  dto: AIDescriptionOptimizationDto,
+) {
+  const shop = await this.shopModel.findById(shopId).lean();
+  if (!shop) throw new Error('Invalid shop');
+    console.log(shop)
+  // 1️⃣ Fetch product
+  const productResponse = await this.shopifyService.shopifyRequest(
+    shop.shopDomain,
+    shop.accessToken,
+    PRODUCT_DESCRIPTION_AI_QUERY,
+    { id: dto.productId },
+  );
+
+
+  const product = productResponse.product;
+  if (!product) throw new Error('Product not found');
+
+  // 2️⃣ Build AI prompt
+  const prompt = buildDescriptionAIPrompt(product, dto);
+
+  // 3️⃣ Call Groq AI
+  let aiDescription = await this.aiService.generateDescription(prompt);
+
+  // 4️⃣ Clean response
+  aiDescription = aiDescription.trim();
+
+  // 5️⃣ Apply to Shopify (optional)
+  if (dto.apply === true) {
+    const applied = await this.applyDescriptionOptimization(shopId, {
+      productId: dto.productId,
+      oldDescription: product.description,
+      newDescription: aiDescription,
+    });
+
+    return {
+      applied: true,
+      productId: dto.productId,
+      oldDescription: product.descriptionHtml,
+      newDescription: aiDescription,
+      characterCount: aiDescription.length,
+      image: product.featuredMedia?.preview?.image?.url || null,
+      optimizationRecordId: applied._id,
+    };
+  }
+
+  return {
+    productId: dto.productId,
+    oldDescription: product.descriptionHtml,
+    newDescription: aiDescription,
+    characterCount: aiDescription.length,
+    image: product.featuredMedia?.preview?.image?.url || null,
+  };
+}
 
 
 }

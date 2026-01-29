@@ -1,18 +1,11 @@
-export const PRODUCT_BY_ID_QUERY = `
+export const PRODUCT_DESCRIPTION_AI_QUERY = `
 query getProduct($id: ID!) {
   product(id: $id) {
     id
     title
-    descriptionHtml
-    handle
-    status
     vendor
     productType
-    tags
-    seo {
-          title
-          description
-        }
+    description
     featuredMedia {
       ... on MediaImage {
         preview {
