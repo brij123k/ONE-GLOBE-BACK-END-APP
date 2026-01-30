@@ -11,11 +11,17 @@ import { ShopifyService } from 'src/common/shopify/shopify.service';
 import { Shop } from 'src/schema/shop.schema';
 import { OptimizeMetaTitleDto } from 'src/dto/meta-title/optimize-meta-title.dto';
 import { buildMetaTitleAIPrompt } from 'src/common/buildMetaTitleAIPrompt';
+import { SaveMetaDescriptionDto } from 'src/dto/meta-description/save-meta-description.dto';
+import { MetaDescription,MetaDescriptionDocument } from 'src/schema/meta-description/classic-meta-description.schema';
+import { OptimizeMetaDescriptionDto } from 'src/dto/meta-description/optimize-meta-description.dto';
 @Injectable()
 export class MetaService {
   constructor(
     @InjectModel(MetaTitle.name)
     private metaTitleOptimizedModel: Model<MetaTitleDocument>,
+
+    @InjectModel(MetaDescription.name)
+    private metadescriptionOptimizedModel: Model<MetaDescriptionDocument>,
     private readonly aiService: AiService,
 
     private readonly shopifyService: ShopifyService,
@@ -55,9 +61,9 @@ export class MetaService {
   aiMetaTitle = aiMetaTitle.replace(/["']/g, '').trim();
 
   // 5️⃣ Optional length enforcement (SEO best practice: ≤ 60 chars)
-  if (aiMetaTitle.length > 60) {
-    aiMetaTitle = aiMetaTitle.slice(0, 60).trim();
-  }
+  // if (aiMetaTitle.length > 60) {
+  //   aiMetaTitle = aiMetaTitle.slice(0, 60).trim();
+  // }
 
   // 6️⃣ Apply immediately if requested
   if (dto.apply === true) {
@@ -86,6 +92,72 @@ export class MetaService {
     oldMetaTitle,
     newMetaTitle: aiMetaTitle,
     characterCount: aiMetaTitle.length,
+  };
+}
+
+
+  async generateAIMetaDescription(
+  shopId: string,
+  dto: OptimizeMetaDescriptionDto,
+) {
+  const shop = await this.shopModel.findById(shopId).lean();
+  if (!shop) throw new Error('Invalid shop');
+
+  // 1️⃣ Fetch product (GraphQL)
+  const productResponse = await this.shopifyService.shopifyRequest(
+    shop.shopDomain,
+    shop.accessToken,
+    PRODUCT_META_TITLE_AI_QUERY,
+    { id: dto.productId },
+  );
+
+  const product = productResponse.product;
+  if (!product) throw new Error('Product not found');
+
+  const oldMetaDescription =
+    product.seo?.description || product.description;
+
+  // 2️⃣ Build AI prompt
+  const prompt = buildMetaTitleAIPrompt(product, dto);
+
+  // 3️⃣ Call Groq AI
+  let aiMetaDescription = await this.aiService.generateMetaDescription(prompt);
+
+  // 4️⃣ Clean AI response
+  aiMetaDescription = aiMetaDescription.trim();
+
+  // 5️⃣ Optional length enforcement (SEO best practice: ≤ 60 chars)
+  // if (aiMetaDescription.length > 60) {
+  //   aiMetaTitle = aiMetaTitle.slice(0, 60).trim();
+  // }
+
+  // 6️⃣ Apply immediately if requested
+  if (dto.apply === true) {
+    const applied = await this.applyMetaDescriptionOptimization(
+      shopId,
+      {
+        productId: dto.productId,
+        oldMetaDescription,
+        newMetaDescription: aiMetaDescription,
+      },
+    );
+
+    return {
+      applied: true,
+      productId: dto.productId,
+      oldMetaDescription,
+      newMetaDescription: aiMetaDescription,
+      characterCount: aiMetaDescription.length,
+      optimizationRecordId: applied._id,
+    };
+  }
+
+  // 7️⃣ Preview response
+  return {
+    productId: dto.productId,
+    oldMetaDescription,
+    newMetaTitle: aiMetaDescription,
+    characterCount: aiMetaDescription.length,
   };
 }
 
@@ -122,6 +194,42 @@ export class MetaService {
     productId: dto.productId,
     oldMetaTitle: dto.oldMetaTitle,
     newMetaTitle: dto.newMetaTitle,
+    appliedToShopify:true
+  });
+}
+
+
+ async applyMetaDescriptionOptimization(
+  shopId: string,
+  dto: SaveMetaDescriptionDto,
+) {
+  const shop = await this.shopModel.findById(shopId).lean();
+  if (!shop) throw new Error('Invalid shop');
+
+  // 1️⃣ Update Shopify SEO Meta Title
+  const response = await this.shopifyService.shopifyRequest(
+    shop.shopDomain,
+    shop.accessToken,
+    UPDATE_PRODUCT_META_MUTATION,
+    {
+      input: {
+        id: dto.productId,
+        seo: {
+          description: dto.newMetaDescription,
+        },
+      },
+    },
+  );
+
+  const errors = response.productUpdate.userErrors;
+  if (errors.length) throw errors;
+
+  // 2️⃣ Store optimization history
+  return this.metadescriptionOptimizedModel.create({
+    shopId,
+    productId: dto.productId,
+    oldMetaDescription: dto.oldMetaDescription,
+    newMetaDescription: dto.newMetaDescription,
     appliedToShopify:true
   });
 }

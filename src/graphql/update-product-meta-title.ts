@@ -5,6 +5,7 @@ export const UPDATE_PRODUCT_META_MUTATION = `
         id
         seo {
           title
+          description
         }
       }
       userErrors {

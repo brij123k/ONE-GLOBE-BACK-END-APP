@@ -6,6 +6,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ShopModule } from './api/shop/shop.module';
 import { AuthModule } from './api/auth/auth.module';
 import { OptimizationModule } from './api/optimization/optimization.module';
+import { MetaModule } from './api/meta/meta.module';
 @Module({
   imports: [
     ConfigModule.forRoot({isGlobal: true}),
@@ -14,6 +15,7 @@ import { OptimizationModule } from './api/optimization/optimization.module';
    ShopModule,
    AuthModule,
    OptimizationModule,
+   MetaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
