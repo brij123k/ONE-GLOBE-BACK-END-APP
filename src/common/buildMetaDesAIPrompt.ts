@@ -8,10 +8,10 @@ export function buildMetaDescriptionAIPrompt(
 return `
 You are an expert Shopify SEO specialist.
 
-Your task is to generate a HIGH-CTR, search-optimized META TITLE for a Shopify product.
+Your task is to generate a HIGH-CTR, search-optimized META description for a Shopify product.
 
 Rules (VERY IMPORTANT):
-- Maximum length: 60 characters
+- Maximum length: 160 characters
 - Do NOT use quotes
 - Do NOT add emojis
 - Do NOT repeat words unnecessarily
