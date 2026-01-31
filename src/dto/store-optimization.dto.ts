@@ -7,4 +7,5 @@ export class StoreOptimizationDto {
   @IsArray()
   @IsString({ each: true })
   productIds: string[];
+  
 }

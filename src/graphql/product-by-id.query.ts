@@ -4,6 +4,7 @@ query getProduct($id: ID!) {
     id
     title
     descriptionHtml
+    description
     handle
     status
     vendor

@@ -99,6 +99,7 @@ export class OptimizationService {
                 shop.accessToken,
                 productId,
             );
+            console.log(product)
             if (!product) continue;
             const image =
                 product.featuredMedia?.preview?.image?.url || null;
@@ -135,8 +136,8 @@ export class OptimizationService {
                     shopId,
                     productId,
                     productImage: image,
-                    description: product.description,
-                    metaDescription: product.seo.description ||product.title ,
+                    description: product.description || product.title ,
+                    metaDescription: product.seo.description || '',
                 });
             }
         }
