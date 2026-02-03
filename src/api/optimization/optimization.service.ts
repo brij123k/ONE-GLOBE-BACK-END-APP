@@ -50,8 +50,8 @@ export class OptimizationService {
         @InjectModel(OptimizedMetaDescription.name)
         private MetaDescriptionModel: Model<OptimizedMetaDescription>,
 
-        @InjectModel(ImageOptimization.name)
-        private optimizedImage: Model<ImageOptimization>,
+        // @InjectModel(ImageOptimization.name)
+        // private optimizedImage: Model<ImageOptimization>,
 
         @InjectModel(Shop.name)
         private shopModel: Model<Shop>,
@@ -97,9 +97,9 @@ export class OptimizationService {
         if (dto.serviceName === 'metaDescription') {
             await this.MetaDescriptionModel.deleteMany({ shopId });
         }
-        if (dto.serviceName === 'image') {
-            await this.optimizedImage.deleteMany({ shopId })
-        }
+        // if (dto.serviceName === 'image') {
+        //     await this.optimizedImage.deleteMany({ shopId })
+        // }
 
         // 🔥 STEP 2: PREPARE BULK INSERT DATA
         const documents: any[] = [];
@@ -186,9 +186,9 @@ export class OptimizationService {
         if (dto.serviceName === 'metaDescription' && documents.length) {
             inserted = await this.MetaDescriptionModel.insertMany(documents);
         }
-        if (dto.serviceName === 'image' && documents.length) {
-            inserted = await this.optimizedImage.insertMany(documents);
-        }
+        // if (dto.serviceName === 'image' && documents.length) {
+        //     inserted = await this.optimizedImage.insertMany(documents);
+        // }
 
         // 🔥 STEP 4: RESPONSE
         return {
@@ -215,9 +215,9 @@ export class OptimizationService {
         if (serviceName === 'metaDescription') {
             return this.MetaDescriptionModel.find({ shopId }).lean();
         }
-        if (serviceName === 'image') {
-            return this.optimizedImage.find({ shopId }).lean();
-        }
+        // if (serviceName === 'image') {
+        //     return this.optimizedImage.find({ shopId }).lean();
+        // }
 
         throw new Error('Invalid service name');
     }
