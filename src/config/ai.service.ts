@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import Groq from 'groq-sdk';
 @Injectable()
 export class AiService {
- private groq: Groq;
+  private groq: Groq;
 
   constructor() {
     const key = process.env.GROQ_API_KEY;
@@ -41,7 +41,7 @@ export class AiService {
     return title;
   }
 
-   async generateDescription(prompt: string): Promise<string> {
+  async generateDescription(prompt: string): Promise<string> {
     console.log('Groq Key Loaded:', !!process.env.GROQ_API_KEY);
     const response = await this.groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
@@ -67,57 +67,83 @@ export class AiService {
 
 
   async generateMetaTitle(prompt: string): Promise<string> {
+    const response = await this.groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are an expert Shopify SEO meta title optimizer. Generate a concise, high-CTR meta title under 60 characters.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.6,
+      max_tokens: 120,
+    });
+
+    let title = response.choices[0].message.content ?? '';
+
+    // 🧹 Clean output
+    title = title
+      .replace(/["\n]/g, '')
+      .trim();
+
+    return title;
+  }
+
+  async generateMetaDescription(prompt: string): Promise<string> {
+    const response = await this.groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are an expert Shopify SEO meta description optimizer. Generate a concise, high-CTR meta Description',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.6,
+      max_tokens: 120,
+    });
+
+    let description = response.choices[0].message.content ?? '';
+
+    // 🧹 Clean output
+    description = description.trim();
+
+    return description;
+  }
+
+async generateImageAlt(prompt: string): Promise<string> {
   const response = await this.groq.chat.completions.create({
     model: 'llama-3.3-70b-versatile',
     messages: [
       {
         role: 'system',
-        content:
-          'You are an expert Shopify SEO meta title optimizer. Generate a concise, high-CTR meta title under 60 characters.',
+        content: 'You generate SEO-friendly ALT text for Shopify images.',
       },
       {
         role: 'user',
         content: prompt,
       },
     ],
-    temperature: 0.6,
+    temperature: 0.5,
     max_tokens: 120,
   });
 
-  let title = response.choices[0].message.content ?? '';
-
-  // 🧹 Clean output
-  title = title
+  return (
+    response.choices[0].message.content || ''
+  )
     .replace(/["\n]/g, '')
     .trim();
-
-  return title;
 }
 
-async generateMetaDescription(prompt: string): Promise<string> {
-  const response = await this.groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    messages: [
-      {
-        role: 'system',
-        content:
-          'You are an expert Shopify SEO meta description optimizer. Generate a concise, high-CTR meta Description',
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-    temperature: 0.6,
-    max_tokens: 120,
-  });
 
-  let description = response.choices[0].message.content ?? '';
-
-  // 🧹 Clean output
-  description = description.trim();
-
-  return description;
-}
 
 }

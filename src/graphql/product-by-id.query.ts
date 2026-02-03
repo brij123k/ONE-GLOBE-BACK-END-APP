@@ -23,6 +23,17 @@ query getProduct($id: ID!) {
         }
       }
     }
+    images(first: 10) {
+      edges {
+        node {
+          id
+          altText
+          originalSrc
+          width
+          height
+        }
+      }
+    }
   }
 }
 `;

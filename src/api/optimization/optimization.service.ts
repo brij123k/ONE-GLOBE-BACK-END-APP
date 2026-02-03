@@ -24,7 +24,9 @@ import { buildDescriptionAIPrompt } from 'src/common/buildDescriptionAIPrompt';
 import { PRODUCT_DESCRIPTION_AI_QUERY } from 'src/graphql/product-description-ai';
 import { OptimizedMetaTitle } from 'src/schema/meta-title/optimized-meta-title.schema';
 import { OptimizedMetaDescription } from 'src/schema/meta-description/optimized-meta-description.schema';
-
+import { ImageOptimization } from 'src/schema/image/optimized-image.schema';
+import { PRODUCT_IMAGES_WITH_VARIANTS_QUERY } from 'src/graphql/product_images_with_variant_query';
+import { StoreImageOptimizationDto } from 'src/dto/image/store-image-optimization.dto';
 @Injectable()
 export class OptimizationService {
     constructor(
@@ -47,6 +49,9 @@ export class OptimizationService {
 
         @InjectModel(OptimizedMetaDescription.name)
         private MetaDescriptionModel: Model<OptimizedMetaDescription>,
+
+        @InjectModel(ImageOptimization.name)
+        private optimizedImage: Model<ImageOptimization>,
 
         @InjectModel(Shop.name)
         private shopModel: Model<Shop>,
@@ -72,6 +77,9 @@ export class OptimizationService {
     }
 
     async storeProducts(shopId: string, dto: StoreOptimizationDto) {
+        if(dto.serviceName==="image"){
+            this.storeForImageOptimization(shopId,dto.productIds)
+        }
         const shop = await this.shopModel.findById(shopId).lean();
         if (!shop) throw new Error('Invalid shop');
 
@@ -89,6 +97,9 @@ export class OptimizationService {
         if (dto.serviceName === 'metaDescription') {
             await this.MetaDescriptionModel.deleteMany({ shopId });
         }
+        if (dto.serviceName === 'image') {
+            await this.optimizedImage.deleteMany({ shopId })
+        }
 
         // 🔥 STEP 2: PREPARE BULK INSERT DATA
         const documents: any[] = [];
@@ -101,8 +112,9 @@ export class OptimizationService {
             );
             console.log(product)
             if (!product) continue;
-            const image =
-                product.featuredMedia?.preview?.image?.url || null;
+            const image = product.featuredMedia?.preview?.image?.url || null;
+
+            // const image = product.
 
             if (dto.serviceName === 'title') {
                 documents.push({
@@ -118,7 +130,7 @@ export class OptimizationService {
                     shopId,
                     productId,
                     productImage: image,
-                    description: product.descriptionHtml ||product.description ,
+                    description: product.descriptionHtml || product.description,
                     descriptionHtml: product.descriptionHtml || product.title,
                 });
             }
@@ -128,7 +140,7 @@ export class OptimizationService {
                     productId,
                     productImage: image,
                     title: product.title,
-                    metaTitle: product.seo.title ||product.title ,
+                    metaTitle: product.seo.title || product.title,
                 });
             }
             if (dto.serviceName === 'metaDescription') {
@@ -136,10 +148,26 @@ export class OptimizationService {
                     shopId,
                     productId,
                     productImage: image,
-                    description: product.description || product.title ,
+                    description: product.description || product.title,
                     metaDescription: product.seo.description || '',
                 });
             }
+            // if (dto.serviceName === 'image') {
+            //     const imageData = await this.fetchProductImagesForOptimization(
+            //         shop.shopDomain,
+            //         shop.accessToken,
+            //         productId,
+            //     );
+
+            //     if (!imageData) continue;
+
+            //     documents.push({
+            //         shopId,
+            //         productId,
+            //         productTitle: imageData.productTitle,
+            //         images: imageData.images,
+            //     });
+            // }
         }
 
         // 🔥 STEP 3: BULK INSERT
@@ -157,6 +185,9 @@ export class OptimizationService {
         }
         if (dto.serviceName === 'metaDescription' && documents.length) {
             inserted = await this.MetaDescriptionModel.insertMany(documents);
+        }
+        if (dto.serviceName === 'image' && documents.length) {
+            inserted = await this.optimizedImage.insertMany(documents);
         }
 
         // 🔥 STEP 4: RESPONSE
@@ -183,6 +214,9 @@ export class OptimizationService {
         }
         if (serviceName === 'metaDescription') {
             return this.MetaDescriptionModel.find({ shopId }).lean();
+        }
+        if (serviceName === 'image') {
+            return this.optimizedImage.find({ shopId }).lean();
         }
 
         throw new Error('Invalid service name');
@@ -229,7 +263,7 @@ export class OptimizationService {
     ) {
         const shop = await this.shopModel.findById(shopId).lean();
         if (!shop) throw new Error('Invalid shop');
-        console.log(shop,dto)
+        console.log(shop, dto)
         // 1️⃣ Update Shopify
         const response = await this.shopifyService.shopifyRequest(
             shop.shopDomain,
@@ -292,22 +326,22 @@ export class OptimizationService {
         // }
 
         if (dto.apply === true) {
-    const applied = await this.applyTitleOptimization(shopId, {
-      productId: dto.productId,
-      oldTitle: product.title,
-      newTitle: aiTitle,
-    });
+            const applied = await this.applyTitleOptimization(shopId, {
+                productId: dto.productId,
+                oldTitle: product.title,
+                newTitle: aiTitle,
+            });
 
-    return {
-      applied: true,
-      productId: dto.productId,
-      oldTitle: product.title,
-      newTitle: aiTitle,
-      characterCount: aiTitle.length,
-      image: product.featuredMedia?.preview?.image?.url || null,
-      optimizationRecordId: applied._id,
-    };
-  }
+            return {
+                applied: true,
+                productId: dto.productId,
+                oldTitle: product.title,
+                newTitle: aiTitle,
+                characterCount: aiTitle.length,
+                image: product.featuredMedia?.preview?.image?.url || null,
+                optimizationRecordId: applied._id,
+            };
+        }
 
         return {
             productId: dto.productId,
@@ -321,61 +355,167 @@ export class OptimizationService {
 
 
 
-async generateAIDescription(
+    async generateAIDescription(
+        shopId: string,
+        dto: AIDescriptionOptimizationDto,
+    ) {
+        const shop = await this.shopModel.findById(shopId).lean();
+        if (!shop) throw new Error('Invalid shop');
+        console.log(shop)
+        // 1️⃣ Fetch product
+        const productResponse = await this.shopifyService.shopifyRequest(
+            shop.shopDomain,
+            shop.accessToken,
+            PRODUCT_DESCRIPTION_AI_QUERY,
+            { id: dto.productId },
+        );
+
+
+        const product = productResponse.product;
+        if (!product) throw new Error('Product not found');
+
+        // 2️⃣ Build AI prompt
+        const prompt = buildDescriptionAIPrompt(product, dto);
+
+        // 3️⃣ Call Groq AI
+        let aiDescription = await this.aiService.generateDescription(prompt);
+
+        // 4️⃣ Clean response
+        aiDescription = aiDescription.trim();
+
+        // 5️⃣ Apply to Shopify (optional)
+        if (dto.apply === true) {
+            const applied = await this.applyDescriptionOptimization(shopId, {
+                productId: dto.productId,
+                oldDescription: product.description,
+                newDescription: aiDescription,
+            });
+
+            return {
+                applied: true,
+                productId: dto.productId,
+                oldDescription: product.descriptionHtml,
+                newDescription: aiDescription,
+                characterCount: aiDescription.length,
+                image: product.featuredMedia?.preview?.image?.url || null,
+                optimizationRecordId: applied._id,
+            };
+        }
+
+        return {
+            productId: dto.productId,
+            oldDescription: product.descriptionHtml,
+            newDescription: aiDescription,
+            characterCount: aiDescription.length,
+            image: product.featuredMedia?.preview?.image?.url || null,
+        };
+    }
+
+
+    // async fetchProductImagesForOptimization(
+    //     shopDomain: string,
+    //     accessToken: string,
+    //     productId: string,
+    // ) {
+    //     const response = await this.shopifyService.shopifyRequest(
+    //         shopDomain,
+    //         accessToken,
+    //         PRODUCT_IMAGES_WITH_VARIANTS_QUERY,
+    //         { id: productId },
+    //     );
+
+    //     const product = response.product;
+
+    //     if (!product) return null;
+
+    //     const images = product.images.edges.map(e => e.node);
+    //     const variants = product.variants.edges.map(e => e.node);
+
+    //     const normalizedImages = images.map((image, index) => {
+    //         const usedByVariants = variants.filter(
+    //             v => v.image?.id === image.id,
+    //         );
+    //         console.log(image)
+    //         if (!image.id.startsWith('gid://shopify/MediaImage/')) {
+    //             throw new Error(
+    //                 `Invalid image source detected. REST ProductImage ID found: ${image.id}`,
+    //             );
+    //         }
+    //         return {
+    //             imageId: image.id, // MediaImage ID
+    //             imageUrl: image.originalSrc,
+    //             altText: image.altText || '',
+    //             imageName:
+    //                 image.altText ||
+    //                 image.originalSrc.split('/').pop() ||
+    //                 `Image ${index + 1}`,
+    //             variants: usedByVariants.map(v => ({
+    //                 variantId: v.id,
+    //                 title: v.title,
+    //                 sku: v.sku,
+    //             })),
+    //         };
+    //     });
+
+    //     return {
+    //         productId,
+    //         productTitle: product.title,
+    //         images: normalizedImages,
+    //     };
+    // }
+
+    async storeForImageOptimization(
   shopId: string,
-  dto: AIDescriptionOptimizationDto,
+  dto: StoreImageOptimizationDto,
 ) {
   const shop = await this.shopModel.findById(shopId).lean();
   if (!shop) throw new Error('Invalid shop');
-    console.log(shop)
-  // 1️⃣ Fetch product
-  const productResponse = await this.shopifyService.shopifyRequest(
-    shop.shopDomain,
-    shop.accessToken,
-    PRODUCT_DESCRIPTION_AI_QUERY,
-    { id: dto.productId },
-  );
 
+  await this.optimizedImage.deleteMany({ shopId });
 
-  const product = productResponse.product;
-  if (!product) throw new Error('Product not found');
+  const docs = [];
 
-  // 2️⃣ Build AI prompt
-  const prompt = buildDescriptionAIPrompt(product, dto);
+  for (const productId of dto.productIds) {
+    const product = await this.shopifyService.getProduct(
+      shop.shopDomain,
+      shop.accessToken,
+      productId,
+    );
 
-  // 3️⃣ Call Groq AI
-  let aiDescription = await this.aiService.generateDescription(prompt);
+    if (!product) continue;
 
-  // 4️⃣ Clean response
-  aiDescription = aiDescription.trim();
+    const images = await this.shopifyService.getProductImages(
+      shop.shopDomain,
+      shop.accessToken,
+      productId,
+    );
 
-  // 5️⃣ Apply to Shopify (optional)
-  if (dto.apply === true) {
-    const applied = await this.applyDescriptionOptimization(shopId, {
-      productId: dto.productId,
-      oldDescription: product.description,
-      newDescription: aiDescription,
+    const normalizedImages = images.map((img, index) => ({
+      imageRestId: String(img.id),
+      imageGraphqlId: img.admin_graphql_api_id, // 🔥 KEY
+      imageUrl: img.src,
+      imageName: img.src.split('/').pop()?.split('?')[0],
+      altText: img.alt || '',
+      variants: product.variants
+        .filter(v => v.image_id === img.id)
+        .map(v => ({
+          variantId: String(v.id),
+          title: v.title,
+          sku: v.sku,
+        })),
+    }));
+
+    docs.push({
+      shopId,
+      productId: String(product.id),
+      productTitle: product.title,
+      images: normalizedImages,
     });
-
-    return {
-      applied: true,
-      productId: dto.productId,
-      oldDescription: product.descriptionHtml,
-      newDescription: aiDescription,
-      characterCount: aiDescription.length,
-      image: product.featuredMedia?.preview?.image?.url || null,
-      optimizationRecordId: applied._id,
-    };
   }
 
-  return {
-    productId: dto.productId,
-    oldDescription: product.descriptionHtml,
-    newDescription: aiDescription,
-    characterCount: aiDescription.length,
-    image: product.featuredMedia?.preview?.image?.url || null,
-  };
+  return this.imageOptimizationModel.insertMany(docs);
 }
+
 
 
 }

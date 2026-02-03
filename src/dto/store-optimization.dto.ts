@@ -1,8 +1,8 @@
 import { IsArray, IsIn, IsString } from 'class-validator';
 
 export class StoreOptimizationDto {
-  @IsIn(['title', 'description','metaTitle','metaDescription'])
-  serviceName: 'title' | 'description' | 'metaTitle' | 'metaDescription';
+  @IsIn(['title', 'description','metaTitle','metaDescription','image'])
+  serviceName: 'title' | 'description' | 'metaTitle' | 'metaDescription' | 'image';
 
   @IsArray()
   @IsString({ each: true })

@@ -31,4 +31,30 @@ export class ShopifyService {
 
     return data.data;
   }
+  async getProductImages(
+    shop: string,
+    token: string,
+    productId: string,
+  ) {
+    const url = `https://${shop}/admin/api/2024-10/products/${productId}/images.json`;
+
+    const res = await axios.get(url, {
+      headers: {
+        'X-Shopify-Access-Token': token,
+      },
+    });
+
+    return res.data.images;
+  }
+  async getProduct(shop: string, token: string, productId: string) {
+    const url = `https://${shop}/admin/api/2024-10/products/${productId}.json`;
+
+    const res = await axios.get(url, {
+      headers: {
+        'X-Shopify-Access-Token': token,
+      },
+    });
+
+    return res.data.product;
+  }
 }

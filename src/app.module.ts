@@ -7,6 +7,7 @@ import { ShopModule } from './api/shop/shop.module';
 import { AuthModule } from './api/auth/auth.module';
 import { OptimizationModule } from './api/optimization/optimization.module';
 import { MetaModule } from './api/meta/meta.module';
+import { ImageSeoModule } from './api/image-seo/image-seo.module';
 @Module({
   imports: [
     ConfigModule.forRoot({isGlobal: true}),
@@ -16,6 +17,7 @@ import { MetaModule } from './api/meta/meta.module';
    AuthModule,
    OptimizationModule,
    MetaModule,
+   ImageSeoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
