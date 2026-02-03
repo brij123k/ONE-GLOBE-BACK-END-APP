@@ -77,9 +77,9 @@ export class OptimizationService {
     }
 
     async storeProducts(shopId: string, dto: StoreOptimizationDto) {
-        if(dto.serviceName==="image"){
-            this.storeForImageOptimization(shopId,dto.productIds)
-        }
+        // if(dto.serviceName==="image"){
+        //     this.storeForImageOptimization(shopId,dto.productIds)
+        // }
         const shop = await this.shopModel.findById(shopId).lean();
         if (!shop) throw new Error('Invalid shop');
 
@@ -464,57 +464,57 @@ export class OptimizationService {
     //     };
     // }
 
-    async storeForImageOptimization(
-  shopId: string,
-  dto: StoreImageOptimizationDto,
-) {
-  const shop = await this.shopModel.findById(shopId).lean();
-  if (!shop) throw new Error('Invalid shop');
+//     async storeForImageOptimization(
+//   shopId: string,
+//   dto: StoreImageOptimizationDto,
+// ) {
+//   const shop = await this.shopModel.findById(shopId).lean();
+//   if (!shop) throw new Error('Invalid shop');
 
-  await this.optimizedImage.deleteMany({ shopId });
+//   await this.optimizedImage.deleteMany({ shopId });
 
-  const docs = [];
+//   const docs = [];
 
-  for (const productId of dto.productIds) {
-    const product = await this.shopifyService.getProduct(
-      shop.shopDomain,
-      shop.accessToken,
-      productId,
-    );
+//   for (const productId of dto.productIds) {
+//     const product = await this.shopifyService.getProduct(
+//       shop.shopDomain,
+//       shop.accessToken,
+//       productId,
+//     );
 
-    if (!product) continue;
+//     if (!product) continue;
 
-    const images = await this.shopifyService.getProductImages(
-      shop.shopDomain,
-      shop.accessToken,
-      productId,
-    );
+//     const images = await this.shopifyService.getProductImages(
+//       shop.shopDomain,
+//       shop.accessToken,
+//       productId,
+//     );
 
-    const normalizedImages = images.map((img, index) => ({
-      imageRestId: String(img.id),
-      imageGraphqlId: img.admin_graphql_api_id, // 🔥 KEY
-      imageUrl: img.src,
-      imageName: img.src.split('/').pop()?.split('?')[0],
-      altText: img.alt || '',
-      variants: product.variants
-        .filter(v => v.image_id === img.id)
-        .map(v => ({
-          variantId: String(v.id),
-          title: v.title,
-          sku: v.sku,
-        })),
-    }));
+//     const normalizedImages = images.map((img, index) => ({
+//       imageRestId: String(img.id),
+//       imageGraphqlId: img.admin_graphql_api_id, // 🔥 KEY
+//       imageUrl: img.src,
+//       imageName: img.src.split('/').pop()?.split('?')[0],
+//       altText: img.alt || '',
+//       variants: product.variants
+//         .filter(v => v.image_id === img.id)
+//         .map(v => ({
+//           variantId: String(v.id),
+//           title: v.title,
+//           sku: v.sku,
+//         })),
+//     }));
 
-    docs.push({
-      shopId,
-      productId: String(product.id),
-      productTitle: product.title,
-      images: normalizedImages,
-    });
-  }
+//     docs.push({
+//       shopId,
+//       productId: String(product.id),
+//       productTitle: product.title,
+//       images: normalizedImages,
+//     });
+//   }
 
-  return this.imageOptimizationModel.insertMany(docs);
-}
+//   return this.imageOptimizationModel.insertMany(docs);
+// }
 
 
 
