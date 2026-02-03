@@ -21,7 +21,7 @@ import { ClassicDescriptionOptimized, ClassicDescriptionOptimizedSchema } from '
 import { AiService } from 'src/config/ai.service';
 import { OptimizedMetaTitle,OptimizedMetaTitleSchema } from 'src/schema/meta-title/optimized-meta-title.schema';
 import { OptimizedMetaDescription, OptimizedMetaDescriptionSchema } from 'src/schema/meta-description/optimized-meta-description.schema';
-import { OptimizedImage,OptimizedImageSchema } from 'src/schema/image/optimized-image.schema';
+// import { OptimizedImage,OptimizedImageSchema } from 'src/schema/image/optimized-image.schema';
 @Module({
   imports: [
     AuthModule,
@@ -36,7 +36,7 @@ import { OptimizedImage,OptimizedImageSchema } from 'src/schema/image/optimized-
       { name: ClassicDescriptionOptimized.name, schema: ClassicDescriptionOptimizedSchema },
       { name: OptimizedMetaTitle.name, schema: OptimizedMetaTitleSchema },
       { name: OptimizedMetaDescription.name, schema: OptimizedMetaDescriptionSchema },
-      { name: OptimizedImage.name, schema: OptimizedImageSchema },
+      // { name: OptimizedImage.name, schema: OptimizedImageSchema },
     ]),
   ],
   controllers: [OptimizationController],
