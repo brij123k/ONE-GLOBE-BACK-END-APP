@@ -11,6 +11,8 @@ import { MetaService } from './meta.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SaveMetaDescriptionDto } from 'src/dto/meta-description/save-meta-description.dto';
 import { OptimizeMetaDescriptionDto } from 'src/dto/meta-description/optimize-meta-description.dto';
+import { OptimizeMetaHandleDto } from 'src/dto/meta-handle/optimize-meta-handle.dto';
+import { SaveMetaHandleDto } from 'src/dto/meta-handle/save-meta-handle.dto';
 
 @Controller('api/meta')
 @UseGuards(JwtAuthGuard)
@@ -39,6 +41,15 @@ export class MetaController {
       );
   }
 
+  @Post('handle/optimize')
+    async handleOptimize(@Req() req,@Body() dto: OptimizeMetaHandleDto) {
+    const { shopId } = req.user;
+     return await this.MetaService.generateAIMetaHandle(
+        shopId,
+        dto,
+      );
+  }
+
   /**
    * 🔹 Save Meta Title (Old → New)
    */
@@ -55,6 +66,15 @@ export class MetaController {
   async saveDescription(@Req() req, @Body() dto: SaveMetaDescriptionDto) {
     const { shopId } = req.user;
     return this.MetaService.applyMetaDescriptionOptimization(
+      shopId,
+      dto,
+    );
+  }
+
+  @Post('handle/save')
+  async saveHandle(@Req() req, @Body() dto: SaveMetaHandleDto) {
+    const { shopId } = req.user;
+    return this.MetaService.applyMetaHandleOptimization(
       shopId,
       dto,
     );

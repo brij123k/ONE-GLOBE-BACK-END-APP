@@ -84,7 +84,7 @@ export class ShopController {
   @Get('products')
   async getProducts(@Req() req, @Query() query) {
     const { shopId } = req.user;
-    console.log(query)
+    // console.log(query)
     return this.shopService.getProducts(shopId, query);
   }
 

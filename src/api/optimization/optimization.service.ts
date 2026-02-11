@@ -27,6 +27,7 @@ import { OptimizedMetaDescription } from 'src/schema/meta-description/optimized-
 import { ImageOptimization } from 'src/schema/image/optimized-image.schema';
 import { PRODUCT_IMAGES_WITH_VARIANTS_QUERY } from 'src/graphql/product_images_with_variant_query';
 import { StoreImageOptimizationDto } from 'src/dto/image/store-image-optimization.dto';
+import { OptimizedMetaHandle } from 'src/schema/meta-handle/optimized-meta-handle.schema';
 @Injectable()
 export class OptimizationService {
     constructor(
@@ -49,6 +50,10 @@ export class OptimizationService {
 
         @InjectModel(OptimizedMetaDescription.name)
         private MetaDescriptionModel: Model<OptimizedMetaDescription>,
+
+
+         @InjectModel(OptimizedMetaHandle.name)
+        private MetaHandleModel: Model<OptimizedMetaHandle>,
 
         // @InjectModel(ImageOptimization.name)
         // private optimizedImage: Model<ImageOptimization>,
@@ -75,6 +80,7 @@ export class OptimizationService {
 
         return data.data.product;
     }
+    
 
     async storeProducts(shopId: string, dto: StoreOptimizationDto) {
         // if(dto.serviceName==="image"){
@@ -97,6 +103,9 @@ export class OptimizationService {
         if (dto.serviceName === 'metaDescription') {
             await this.MetaDescriptionModel.deleteMany({ shopId });
         }
+        if(dto.serviceName === 'handle'){
+            await this.MetaHandleModel.deleteMany({ shopId})
+        }
         // if (dto.serviceName === 'image') {
         //     await this.optimizedImage.deleteMany({ shopId })
         // }
@@ -110,7 +119,7 @@ export class OptimizationService {
                 shop.accessToken,
                 productId,
             );
-            console.log(product)
+            // console.log(product)
             if (!product) continue;
             const image = product.featuredMedia?.preview?.image?.url || null;
 
@@ -130,7 +139,7 @@ export class OptimizationService {
                     shopId,
                     productId,
                     productImage: image,
-                    description: product.descriptionHtml || product.description,
+                    description: product.descriptionHtml || product.description || '',
                     descriptionHtml: product.descriptionHtml || product.title,
                 });
             }
@@ -150,6 +159,15 @@ export class OptimizationService {
                     productImage: image,
                     description: product.description || product.title,
                     metaDescription: product.seo.description || '',
+                });
+            }
+            if (dto.serviceName === 'handle') {
+                documents.push({
+                    shopId,
+                    productId,
+                    productImage: image,
+                    title: product.title || product.seo.title ,
+                    metaHandle: product.handle || '',
                 });
             }
             // if (dto.serviceName === 'image') {
@@ -186,6 +204,9 @@ export class OptimizationService {
         if (dto.serviceName === 'metaDescription' && documents.length) {
             inserted = await this.MetaDescriptionModel.insertMany(documents);
         }
+        if (dto.serviceName === 'handle' && documents.length) {
+            inserted = await this.MetaHandleModel.insertMany(documents);
+        }
         // if (dto.serviceName === 'image' && documents.length) {
         //     inserted = await this.optimizedImage.insertMany(documents);
         // }
@@ -214,6 +235,9 @@ export class OptimizationService {
         }
         if (serviceName === 'metaDescription') {
             return this.MetaDescriptionModel.find({ shopId }).lean();
+        }
+        if (serviceName === 'handle') {
+            return this.MetaHandleModel.find({ shopId }).lean();
         }
         // if (serviceName === 'image') {
         //     return this.optimizedImage.find({ shopId }).lean();
@@ -263,7 +287,7 @@ export class OptimizationService {
     ) {
         const shop = await this.shopModel.findById(shopId).lean();
         if (!shop) throw new Error('Invalid shop');
-        console.log(shop, dto)
+        // console.log(shop, dto)
         // 1️⃣ Update Shopify
         const response = await this.shopifyService.shopifyRequest(
             shop.shopDomain,
@@ -361,7 +385,7 @@ export class OptimizationService {
     ) {
         const shop = await this.shopModel.findById(shopId).lean();
         if (!shop) throw new Error('Invalid shop');
-        console.log(shop)
+        // console.log(shop)
         // 1️⃣ Fetch product
         const productResponse = await this.shopifyService.shopifyRequest(
             shop.shopDomain,

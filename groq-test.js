@@ -10,7 +10,7 @@ const run = async () => {
     model: 'llama-3.3-70b-versatile',
     messages: [{ role: 'user', content: 'Say OK' }],
   });
-  console.log(res.choices[0].message.content);
+  // console.log(res.choices[0].message.content);
 };
 
 run();

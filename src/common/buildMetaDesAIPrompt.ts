@@ -11,6 +11,7 @@ You are an expert Shopify SEO specialist.
 Your task is to generate a HIGH-CTR, search-optimized META description for a Shopify product.
 
 Rules (VERY IMPORTANT):
+- Minimun length: 100 characters
 - Maximum length: 160 characters
 - Do NOT use quotes
 - Do NOT add emojis
@@ -22,7 +23,9 @@ Rules (VERY IMPORTANT):
 
 Product Context:
 - Product Description: "${baseDescription}"
+- Product Title: "${product.title}"
 - Existing Meta Description: "${existingMetaDescription}"
+- Existing Meta Title: "${product.seo?.title}"
 
 What to optimize for:
 - Higher click-through rate

@@ -19,6 +19,7 @@ import { ShopifyModule } from 'src/common/shopify/shopify.module';
 import { AiService } from 'src/config/ai.service';
 import { MetaTitle,MetaTitleSchema } from 'src/schema/meta-title/classic-meta-title.schema';
 import { MetaDescription,MetaDescriptionSchema } from 'src/schema/meta-description/classic-meta-description.schema';
+import { MetaHandle,MetaHandleSchema } from 'src/schema/meta-handle/classic-meta-handle.schema';
 @Module({
   imports: [
     AuthModule,
@@ -29,6 +30,7 @@ import { MetaDescription,MetaDescriptionSchema } from 'src/schema/meta-descripti
     MongooseModule.forFeature([
       { name: MetaTitle.name, schema: MetaTitleSchema },
       { name: MetaDescription.name, schema: MetaDescriptionSchema },
+      { name: MetaHandle.name, schema: MetaHandleSchema },
     ]),
   ],
   controllers: [MetaController],

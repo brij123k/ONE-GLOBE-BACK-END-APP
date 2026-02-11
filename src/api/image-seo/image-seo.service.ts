@@ -155,11 +155,11 @@ async applyImageOptimization(
       img.imageId,
     );
 
-    console.log('Updating image ALT:', {
-      productId: dto.productId,
-      mediaId,
-      alt: img.newAlt,
-    });
+    // console.log('Updating image ALT:', {
+    //   productId: dto.productId,
+    //   mediaId,
+    //   alt: img.newAlt,
+    // });
 
     const result = await this.shopifyService.shopifyRequest(
       shop.shopDomain,

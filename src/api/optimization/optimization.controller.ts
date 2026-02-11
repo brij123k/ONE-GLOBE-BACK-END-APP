@@ -60,7 +60,7 @@ async aiDescriptionOptimization(
   @Body() dto: AIDescriptionOptimizationDto,
 ) {
   const { shopId } = req.user;
-  console.log(shopId)
+//   console.log(shopId)
   return this.optimizationService.generateAIDescription(shopId, dto);
 }
 

@@ -42,7 +42,7 @@ export class AiService {
   }
 
   async generateDescription(prompt: string): Promise<string> {
-    console.log('Groq Key Loaded:', !!process.env.GROQ_API_KEY);
+    // console.log('Groq Key Loaded:', !!process.env.GROQ_API_KEY);
     const response = await this.groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [
@@ -58,7 +58,7 @@ export class AiService {
       temperature: 0.6,
       max_tokens: 800,
     });
-    console.log(response)
+    // console.log(response)
 
     let description = response.choices[0].message.content ?? '';
 
@@ -95,6 +95,32 @@ export class AiService {
   }
 
   async generateMetaDescription(prompt: string): Promise<string> {
+    const response = await this.groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are an expert Shopify SEO meta description optimizer. Generate a concise, high-CTR meta Description',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.6,
+      max_tokens: 120,
+    });
+
+    let description = response.choices[0].message.content ?? '';
+
+    // 🧹 Clean output
+    description = description.trim();
+
+    return description;
+  }
+
+    async generateMetaHandle(prompt: string): Promise<string> {
     const response = await this.groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [
