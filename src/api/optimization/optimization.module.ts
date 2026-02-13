@@ -22,6 +22,7 @@ import { AiService } from 'src/config/ai.service';
 import { OptimizedMetaTitle,OptimizedMetaTitleSchema } from 'src/schema/meta-title/optimized-meta-title.schema';
 import { OptimizedMetaDescription, OptimizedMetaDescriptionSchema } from 'src/schema/meta-description/optimized-meta-description.schema';
 import { OptimizedMetaHandle, OptimizedMetaHandleSchema } from 'src/schema/meta-handle/optimized-meta-handle.schema';
+import { OptimizedPricing, OptimizedPricingSchema } from 'src/schema/pricing/optimized-pricing.schema';
 
 // import { OptimizedImage,OptimizedImageSchema } from 'src/schema/image/optimized-image.schema';
 @Module({
@@ -39,6 +40,7 @@ import { OptimizedMetaHandle, OptimizedMetaHandleSchema } from 'src/schema/meta-
       { name: OptimizedMetaTitle.name, schema: OptimizedMetaTitleSchema },
       { name: OptimizedMetaDescription.name, schema: OptimizedMetaDescriptionSchema },
       { name: OptimizedMetaHandle.name, schema: OptimizedMetaHandleSchema },
+      { name: OptimizedPricing.name, schema: OptimizedPricingSchema },
       // { name: OptimizedImage.name, schema: OptimizedImageSchema },
     ]),
   ],

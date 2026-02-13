@@ -10,10 +10,12 @@ query getProduct($id: ID!) {
     vendor
     productType
     tags
+
     seo {
-          title
-          description
-        }
+      title
+      description
+    }
+
     featuredMedia {
       ... on MediaImage {
         preview {
@@ -23,6 +25,7 @@ query getProduct($id: ID!) {
         }
       }
     }
+
     images(first: 10) {
       edges {
         node {
@@ -31,6 +34,31 @@ query getProduct($id: ID!) {
           originalSrc
           width
           height
+        }
+      }
+    }
+
+    variants(first: 100) {
+      edges {
+        node {
+          id
+          title
+          sku
+
+          price
+          compareAtPrice
+
+          inventoryQuantity
+
+          image {
+            url
+          }
+
+          inventoryItem {
+            unitCost {
+              amount
+            }
+          }
         }
       }
     }

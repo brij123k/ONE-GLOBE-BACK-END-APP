@@ -8,6 +8,7 @@ import { AuthModule } from './api/auth/auth.module';
 import { OptimizationModule } from './api/optimization/optimization.module';
 import { MetaModule } from './api/meta/meta.module';
 import { ImageSeoModule } from './api/image-seo/image-seo.module';
+import { PricingModule } from './api/pricing/pricing.module';
 @Module({
   imports: [
     ConfigModule.forRoot({isGlobal: true}),
@@ -18,6 +19,7 @@ import { ImageSeoModule } from './api/image-seo/image-seo.module';
    OptimizationModule,
    MetaModule,
    ImageSeoModule,
+   PricingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
