@@ -85,7 +85,7 @@ export class ShopService {
   async getProducts(shopId: string, params: any) {
     const shop = await this.getShop(shopId);
     // console.log(params.limit)
-    const limit = Number(params.limit)|| 250;
+    const limit = Number(params.limit);
     const cursor = params.cursor || null;
     const collectionId = params.collections;
     const query = buildProductSearchQuery(params);
