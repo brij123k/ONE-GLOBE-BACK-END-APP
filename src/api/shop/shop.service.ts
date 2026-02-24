@@ -89,7 +89,7 @@ export class ShopService {
     const cursor = params.cursor || null;
     const collectionId = params.collections;
     const query = buildProductSearchQuery(params);
-
+    console.log(query)
     if (collectionId) {
       const data = await this.shopifyRequest(
         shop.shopDomain,
@@ -118,33 +118,86 @@ export class ShopService {
   }
 
   async getVendors(shopId: string) {
-    const shop = await this.getShop(shopId);
+  const shop = await this.getShop(shopId);
 
-    let cursor = null;
-    const vendors = new Set<string>();
-
-    while (true) {
-      const data = await this.shopifyRequest(
-        shop.shopDomain,
-        shop.accessToken,
-        VENDORS_QUERY,
-        { first: 100, after: cursor },
-      );
-
-      data.products.edges.forEach(e => {
-        if (e.node.vendor) vendors.add(e.node.vendor);
-      });
-
-      if (!data.products.pageInfo.hasNextPage) break;
-      cursor = data.products.pageInfo.endCursor;
+  const query = `
+    query getVendors($first: Int!, $after: String) {
+      productVendors(first: $first, after: $after) {
+        edges {
+          node
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
     }
+  `;
 
-    return {
-      count: vendors.size,
-      vendors: Array.from(vendors).sort(),
-    };
+  let cursor = null;
+  const vendors = new Set<string>();
+
+  while (true) {
+    const data = await this.shopifyRequest(
+      shop.shopDomain,
+      shop.accessToken,
+      query,
+      { first: 250, after: cursor },
+    );
+
+    data.productVendors.edges.forEach(e => vendors.add(e.node));
+
+    if (!data.productVendors.pageInfo.hasNextPage) break;
+    cursor = data.productVendors.pageInfo.endCursor;
   }
 
+  return {
+    count: vendors.size,
+    vendors: Array.from(vendors).sort(),
+  };
+}
+
+async getProductTypes(shopId: string) {
+  const shop = await this.getShop(shopId);
+
+  const query = `
+    query getProductTypes($first: Int!, $after: String) {
+      productTypes(first: $first, after: $after) {
+        edges {
+          node
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  `;
+
+  let cursor = null;
+  const types = new Set<string>();
+
+  while (true) {
+    const data = await this.shopifyRequest(
+      shop.shopDomain,
+      shop.accessToken,
+      query,
+      { first: 250, after: cursor },
+    );
+
+    data.productTypes.edges.forEach(e => {
+      if (e.node) types.add(e.node);
+    });
+
+    if (!data.productTypes.pageInfo.hasNextPage) break;
+    cursor = data.productTypes.pageInfo.endCursor;
+  }
+
+  return {
+    count: types.size,
+    productTypes: Array.from(types).sort(),
+  };
+}
   async getCollections(shopId: string) {
     const shop = await this.getShop(shopId);
 

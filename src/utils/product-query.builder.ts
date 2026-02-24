@@ -3,7 +3,6 @@ export function buildProductSearchQuery(params: any): string {
 
   if (params.title) filters.push(`title:${params.title}`);
   if (params.handle) filters.push(`handle:${params.handle}`);
-  if (params.description) filters.push(`description:${params.description}`);
   if (params.vendors) filters.push(`vendor:${params.vendors}`);
   if (params.productTypes) filters.push(`product_type:${params.productTypes}`);
   if (params.tags) filters.push(`tag:${params.tags}`);
@@ -15,3 +14,4 @@ export function buildProductSearchQuery(params: any): string {
 
   return filters.join(' AND ');
 }
+  

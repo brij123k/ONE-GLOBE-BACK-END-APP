@@ -96,6 +96,12 @@ export class ShopController {
     return this.shopService.getVendors(shopId);
   }
 
+  @UseGuards(JwtAuthGuard)
+@Get('product-types')
+async getProductTypes(@Req() req) {
+  const { shopId } = req.user;
+  return this.shopService.getProductTypes(shopId);
+}
 
   @UseGuards(JwtAuthGuard)
   @Get('collections')
