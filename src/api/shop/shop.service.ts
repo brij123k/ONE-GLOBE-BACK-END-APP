@@ -296,35 +296,43 @@ async getCategories(shopId: string) {
 }
 
   async getCollections(shopId: string) {
-    const shop = await this.getShop(shopId);
+  const shop = await this.getShop(shopId);
 
-    let cursor = null;
-    const collections: CollectionResponseDto[] = [];
+  let cursor: string | null = null;
+  const collections: CollectionResponseDto[] = [];
 
-    while (true) {
-      const data = await this.shopifyRequest(
-        shop.shopDomain,
-        shop.accessToken,
-        COLLECTIONS_QUERY,
-        { first: 50, after: cursor },
-      );
+  while (true) {
+    const data = await this.shopifyRequest(
+      shop.shopDomain,
+      shop.accessToken,
+      COLLECTIONS_QUERY,
+      { first: 250, after: cursor }, // 🔥 increased from 50 → 250
+    );
 
-      data.collections.edges.forEach(e => {
-        collections.push({
-          id: e.node.id,
-          title: e.node.title,
-          handle: e.node.handle,
-          productsCount: e.node.productsCount.count,
-        });
+    const edges = data?.collections?.edges || [];
+
+    for (const edge of edges) {
+      const node = edge?.node;
+      if (!node) continue;
+
+      collections.push({
+        id: node.id,
+        title: node.title,
+        handle: node.handle,
+        productsCount: node.productsCount?.count ?? 0,
       });
-
-      if (!data.collections.pageInfo.hasNextPage) break;
-      cursor = data.collections.pageInfo.endCursor;
     }
 
-    return {
-      count: collections.length,
-      collections,
-    };
+    if (!data?.collections?.pageInfo?.hasNextPage) break;
+    cursor = data.collections.pageInfo.endCursor;
   }
+
+  // Optional: sort alphabetically
+  collections.sort((a, b) => a.title.localeCompare(b.title));
+
+  return {
+    count: collections.length,
+    collections,
+  };
+}
 }

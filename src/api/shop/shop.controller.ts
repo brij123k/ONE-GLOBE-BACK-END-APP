@@ -80,13 +80,12 @@ export class ShopController {
     );
   }
 
-   @UseGuards(JwtAuthGuard)
-  @Get('products')
-  async getProducts(@Req() req, @Query() query) {
-    const { shopId } = req.user;
-    // console.log(query)
-    return this.shopService.getProducts(shopId, query);
-  }
+@UseGuards(JwtAuthGuard)
+@Get('products')
+async getProducts(@Req() req, @Query() query) {
+  const { shopId } = req.user;
+  return this.shopService.getProducts(shopId, query);
+}
 
   @UseGuards(JwtAuthGuard)
   @Get('vendors')
