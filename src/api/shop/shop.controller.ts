@@ -103,6 +103,20 @@ async getProductTypes(@Req() req) {
   return this.shopService.getProductTypes(shopId);
 }
 
+@UseGuards(JwtAuthGuard)
+@Get('tags')
+async getProductTags(@Req() req) {
+  const { shopId } = req.user;
+  return this.shopService.getProductTags(shopId);
+}
+
+@UseGuards(JwtAuthGuard)
+@Get('categories')
+async getCategories(@Req() req) {
+  const { shopId } = req.user;
+  return this.shopService.getCategories(shopId);
+}
+
   @UseGuards(JwtAuthGuard)
   @Get('collections')
   async getCollections(@Req() req) {

@@ -198,6 +198,103 @@ async getProductTypes(shopId: string) {
     productTypes: Array.from(types).sort(),
   };
 }
+
+async getProductTags(shopId: string) {
+  const shop = await this.getShop(shopId);
+
+  const query = `
+    query getProductTags($first: Int!, $after: String) {
+      productTags(first: $first, after: $after) {
+        edges {
+          node
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  `;
+
+  let cursor = null;
+  const tags = new Set<string>();
+
+  while (true) {
+    const data = await this.shopifyRequest(
+      shop.shopDomain,
+      shop.accessToken,
+      query,
+      { first: 250, after: cursor },
+    );
+
+    data.productTags.edges.forEach(e => {
+      if (e.node) tags.add(e.node);
+    });
+
+    if (!data.productTags.pageInfo.hasNextPage) break;
+    cursor = data.productTags.pageInfo.endCursor;
+  }
+
+  return {
+    count: tags.size,
+    tags: Array.from(tags).sort(),
+  };
+}
+
+async getCategories(shopId: string) {
+  const shop = await this.getShop(shopId);
+
+  const query = `
+    query getCollections($first: Int!, $after: String) {
+      collections(first: $first, after: $after) {
+        edges {
+          node {
+            id
+            title
+            handle
+            productsCount {
+              count
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  `;
+
+  let cursor = null;
+  const categories: any[] = [];
+
+  while (true) {
+    const data = await this.shopifyRequest(
+      shop.shopDomain,
+      shop.accessToken,
+      query,
+      { first: 250, after: cursor },
+    );
+
+    data.collections.edges.forEach(e => {
+      categories.push({
+        id: e.node.id,
+        title: e.node.title,
+        handle: e.node.handle,
+        productsCount: e.node.productsCount?.count || 0,
+      });
+    });
+
+    if (!data.collections.pageInfo.hasNextPage) break;
+    cursor = data.collections.pageInfo.endCursor;
+  }
+
+  return {
+    count: categories.length,
+    categories,
+  };
+}
+
   async getCollections(shopId: string) {
     const shop = await this.getShop(shopId);
 
