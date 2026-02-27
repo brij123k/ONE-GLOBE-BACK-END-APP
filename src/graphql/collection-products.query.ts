@@ -191,6 +191,8 @@ query getCollectionProducts(
         node {
           id
           title
+          descriptionHtml
+          description
           handle
           status
           vendor
@@ -199,16 +201,18 @@ query getCollectionProducts(
           totalInventory
           createdAt
           updatedAt
-
+          seo {
+            title
+            description
+            }
           featuredMedia {
             ... on MediaImage {
               preview {
-                image {
-                  url
-                }
+                image { url }
               }
             }
           }
+            
 
           priceRangeV2 {
             minVariantPrice { amount currencyCode }
@@ -234,6 +238,10 @@ query getCollectionProducts(
         startCursor
         endCursor
       }
+    }
+
+    productsCount {
+      count
     }
   }
 }

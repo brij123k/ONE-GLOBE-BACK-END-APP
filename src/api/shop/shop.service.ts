@@ -82,64 +82,16 @@ export class ShopService {
     return data.data;
   }
 
-  async getProducts(shopId: string, params: any) {
+async getProducts(shopId: string, params: any) {
   const shop = await this.getShop(shopId);
 
-  const limit = Number(params.limit) || 20;
+  const limit = Number(params.limit) || 50;
   const after = params.after || null;
   const before = params.before || null;
 
-  // ---------------- COLLECTION IDS ----------------
-  let collectionIds: string[] = [];
-
-  if (params.collections) {
-    if (Array.isArray(params.collections)) {
-      collectionIds = params.collections;
-    } else if (typeof params.collections === "string") {
-      collectionIds = params.collections.split(",").map((id) => id.trim());
-    }
-  }
-
   const { query } = buildProductSearchQuery(params);
 
-  // =================================================
-  // COLLECTION MODE
-  // =================================================
-  if (collectionIds.length > 0) {
-    // ⚠️ pagination only safe for SINGLE collection
-    const collectionId = collectionIds[0];
-
-    const variables: any = {
-      collectionId,
-    };
-
-    if (before) {
-      variables.last = limit;
-      variables.before = before;
-    } else {
-      variables.first = limit;
-      variables.after = after;
-    }
-
-    const data = await this.shopifyRequest(
-      shop.shopDomain,
-      shop.accessToken,
-      COLLECTION_PRODUCTS_QUERY,
-      variables,
-    );
-
-    return {
-      products: data.collection.products.edges,
-      pageInfo: data.collection.products.pageInfo,
-    };
-  }
-
-  // =================================================
-  // NORMAL SEARCH MODE
-  // =================================================
-  const variables: any = {
-    query,
-  };
+  const variables: any = { query };
 
   if (before) {
     variables.last = limit;
@@ -156,9 +108,14 @@ export class ShopService {
     variables,
   );
 
+  const totalCount = data.productsCount?.count || 0;
+  const totalPages = Math.ceil(totalCount / limit);
+
   return {
     products: data.products.edges,
     pageInfo: data.products.pageInfo,
+    totalCount,
+    totalPages,
   };
 }
 

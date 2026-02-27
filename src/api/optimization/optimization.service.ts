@@ -26,6 +26,9 @@ import { OptimizedMetaTitle } from 'src/schema/meta-title/optimized-meta-title.s
 import { OptimizedMetaDescription } from 'src/schema/meta-description/optimized-meta-description.schema';
 import { OptimizedMetaHandle } from 'src/schema/meta-handle/optimized-meta-handle.schema';
 import { OptimizedPricing } from 'src/schema/pricing/optimized-pricing.schema';
+import { COLLECTION_PRODUCTS_QUERY } from 'src/graphql/collection-products.query';
+import { buildProductSearchQuery } from 'src/utils/product-query.builder';
+import { PRODUCTS_QUERY } from 'src/graphql/products.query';
 @Injectable()
 export class OptimizationService {
     constructor(
@@ -79,6 +82,112 @@ export class OptimizationService {
         return shop;
     }
 
+    private pushDocumentByService(
+        documents: any[],
+        serviceName: string,
+        shopId: string,
+        product: any,
+    ) {
+        const image =
+            product?.featuredMedia?.preview?.image?.url || null;
+
+        switch (serviceName) {
+            case 'title':
+                documents.push({
+                    shopId,
+                    productId: product.id,
+                    productImage: image,
+                    title: product.title,
+                });
+                break;
+
+            case 'description':
+                documents.push({
+                    shopId,
+                    productId: product.id,
+                    productImage: image,
+                    description: product.descriptionHtml || '',
+                    descriptionHtml: product.descriptionHtml || '',
+                });
+                break;
+
+            case 'metaTitle':
+                documents.push({
+                    shopId,
+                    productId: product.id,
+                    productImage: image,
+                    title: product.title,
+                    metaTitle: product.seo?.title || product.title,
+                });
+                break;
+
+            case 'metaDescription':
+                documents.push({
+                    shopId,
+                    productId: product.id,
+                    productImage: image,
+                    description: product.description || '',
+                    metaDescription: product.seo?.description || '',
+                });
+                break;
+
+            case 'handle':
+                documents.push({
+                    shopId,
+                    productId: product.id,
+                    productImage: image,
+                    title: product.title,
+                    metaHandle: product.handle || '',
+                });
+                break;
+
+            case 'pricing':
+                const variants =
+                    product.variants?.edges?.map((v) => ({
+                        variantId: v.node.id,
+                        title: v.node.title,
+                        sku: v.node.sku,
+                        image: v.node.image?.url || null,
+                        price: Number(v.node.price || 0),
+                        compareAtPrice: Number(v.node.compareAtPrice || 0),
+                        costPrice: Number(
+                            v.node.inventoryItem?.unitCost?.amount || 0,
+                        ),
+                        inventoryQuantity: v.node.inventoryQuantity || 0,
+                    })) || [];
+
+                documents.push({
+                    shopId,
+                    productId: product.id,
+                    title: product.title,
+                    productImage: image,
+                    variants,
+                });
+                break;
+        }
+    }
+    private async shopifyRequest(
+        shopDomain: string,
+        accessToken: string,
+        query: string,
+        variables: any,
+      ) {
+        const url = `https://${shopDomain}/admin/api/2026-01/graphql.json`;
+    
+        const { data } = await axios.post(
+          url,
+          { query, variables },
+          {
+            headers: {
+              'X-Shopify-Access-Token': accessToken,
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+    
+        if (data.errors) throw data.errors;
+        return data.data;
+      }
     private async fetchProduct(shopDomain: string, token: string, productId: string) {
         const url = `https://${shopDomain}/admin/api/2026-01/graphql.json`;
 
@@ -97,6 +206,9 @@ export class OptimizationService {
     }
 
     async storeProducts(shopId: string, dto: StoreOptimizationDto) {
+        if (dto.filters) {
+            return this.storeAllproduct(shopId, dto)
+        }
         const shop = await this.getShop(shopId);
 
         const model = this.getModel(dto.serviceName);
@@ -200,9 +312,102 @@ export class OptimizationService {
         };
     }
 
-    // =====================================================
-    // 📦 GET STORED DATA
-    // =====================================================
+    async storeAllproduct(shopId: string, dto: StoreOptimizationDto) {
+        const shop = await this.getShop(shopId);
+
+        const model = this.getModel(dto.serviceName);
+        if (!model) throw new Error('Invalid service name');
+
+        await model.deleteMany({ shopId });
+
+        const documents: any[] = [];
+        const limit = 100;
+
+        let hasNextPage = true;
+        let after: string | null = null;
+
+        const filters = dto.filters || {};
+
+        // ---------- COLLECTION IDS ----------
+        let collectionIds: string[] = [];
+
+        if (filters.collections) {
+            collectionIds = Array.isArray(filters.collections)
+                ? filters.collections
+                : [filters.collections];
+        }
+
+        while (hasNextPage) {
+            let data;
+
+            // ===============================================
+            // COLLECTION MODE
+            // ===============================================
+            if (collectionIds.length > 0) {
+                const variables: any = {
+                    collectionId: collectionIds[0],
+                    first: limit,
+                    after,
+                };
+
+                data = await this.shopifyRequest(
+                    shop.shopDomain,
+                    shop.accessToken,
+                    COLLECTION_PRODUCTS_QUERY,
+                    variables,
+                );
+
+                const edges = data.collection.products.edges;
+                hasNextPage = data.collection.products.pageInfo.hasNextPage;
+                after = data.collection.products.pageInfo.endCursor;
+
+                for (const edge of edges) {
+                    const product = edge.node;
+                    this.pushDocumentByService(documents, dto.serviceName, shopId, product);
+                }
+            }
+
+            else {
+                const { query } = buildProductSearchQuery(filters);
+
+                const variables: any = {
+                    query,
+                    first: limit,
+                    after,
+                };
+
+                data = await this.shopifyRequest(
+                    shop.shopDomain,
+                    shop.accessToken,
+                    PRODUCTS_QUERY,
+                    variables,
+                );
+
+                const edges = data.products.edges;
+                hasNextPage = data.products.pageInfo.hasNextPage;
+                after = data.products.pageInfo.endCursor;
+
+                for (const edge of edges) {
+                    const product = edge.node;
+                    this.pushDocumentByService(documents, dto.serviceName, shopId, product);
+                }
+            }
+        }
+
+        const inserted = documents.length
+            ? await model.insertMany(documents)
+            : [];
+
+        return {
+            shopId,
+            serviceName: dto.serviceName,
+            deletedOld: true,
+            insertedCount: inserted.length,
+            products: inserted,
+        };
+    }
+
+
     async getOptimizedProducts(shopId: string, serviceName: string) {
         const model = this.getModel(serviceName);
         if (!model) throw new Error('Invalid service name');

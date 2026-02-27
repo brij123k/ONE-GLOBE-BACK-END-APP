@@ -18,6 +18,8 @@ query Products(
       node {
         id
         title
+        descriptionHtml
+        description
         handle
         status
         vendor
@@ -26,27 +28,34 @@ query Products(
         createdAt
         updatedAt
         totalInventory
-
+        seo {
+      title
+      description
+    }
         featuredMedia {
           ... on MediaImage {
             preview {
-              image {
-                url
-              }
+              image { url }
             }
           }
         }
+          variants(first: 1) {
+            edges {
+              node {
+                id
+                sku
+                price
+                inventoryQuantity
+              }
+            }
+          }
 
         priceRangeV2 {
           minVariantPrice { amount currencyCode }
         }
 
         variants(first: 1) {
-          edges {
-            node {
-              sku
-            }
-          }
+          edges { node { sku } }
         }
       }
     }
@@ -57,6 +66,10 @@ query Products(
       startCursor
       endCursor
     }
+  }
+
+  productsCount(query: $query) {
+    count
   }
 }
 `;
