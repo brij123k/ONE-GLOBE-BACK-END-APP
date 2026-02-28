@@ -28,10 +28,10 @@ query Products(
         createdAt
         updatedAt
         totalInventory
-        seo {
-      title
-      description
-    }
+          seo {
+        title
+        description
+      }
         featuredMedia {
           ... on MediaImage {
             preview {
