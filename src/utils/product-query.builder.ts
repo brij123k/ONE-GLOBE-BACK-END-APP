@@ -26,22 +26,22 @@ export function buildProductSearchQuery(params: any): {
 
 
   // ---------- COLLECTION ----------
-const collections = normalizeArray(params.collections);
+  const collections = normalizeArray(params.collections);
 
-if (collections.length) {
-  const c = collections
-    .map(id => {
-      // Extract numeric ID if gid format
-      const numericId = id.includes("gid://")
-        ? id.replace("gid://shopify/Collection/", "")
-        : id;
+  if (collections.length) {
+    const c = collections
+      .map(id => {
+        // Extract numeric ID if gid format
+        const numericId = id.includes("gid://")
+          ? id.replace("gid://shopify/Collection/", "")
+          : id;
 
-      return `collection_id:${numericId}`;
-    })
-    .join(" OR ");
+        return `collection_id:${numericId}`;
+      })
+      .join(" OR ");
 
-  filters.push(`(${c})`);
-}
+    filters.push(`(${c})`);
+  }
   // ---------- TEXT ----------
   if (params.title) {
     filters.push(`title:*${escapeValue(params.title)}*`);
@@ -49,6 +49,13 @@ if (collections.length) {
 
   if (params.handle) {
     filters.push(`handle:${escapeValue(params.handle)}`);
+  }
+
+  if (params.sku && typeof params.sku === "string") {
+    const sku = params.sku.trim();
+    if (sku) {
+      filters.push(`sku:*${escapeValue(sku)}*`);
+    }
   }
 
   // ---------- MULTI ----------
@@ -85,34 +92,34 @@ if (collections.length) {
   }
 
   // ---------- PRICE ----------
- if (params.priceMin !== undefined && params.priceMin !== null) {
-  const min = Number(params.priceMin);
-  if (!isNaN(min)) {
-    filters.push(`price:>=${min}`);
+  if (params.priceMin !== undefined && params.priceMin !== null) {
+    const min = Number(params.priceMin);
+    if (!isNaN(min)) {
+      filters.push(`price:>=${min}`);
+    }
   }
-}
 
-if (params.priceMax !== undefined && params.priceMax !== null) {
-  const max = Number(params.priceMax);
-  if (!isNaN(max)) {
-    filters.push(`price:<=${max}`);
+  if (params.priceMax !== undefined && params.priceMax !== null) {
+    const max = Number(params.priceMax);
+    if (!isNaN(max)) {
+      filters.push(`price:<=${max}`);
+    }
   }
-}
 
-// ---------- STOCK ----------
-if (params.stockMin !== undefined && params.stockMin !== null) {
-  const min = Number(params.stockMin);
-  if (!isNaN(min)) {
-    filters.push(`inventory_total:>=${min}`);
+  // ---------- STOCK ----------
+  if (params.stockMin !== undefined && params.stockMin !== null) {
+    const min = Number(params.stockMin);
+    if (!isNaN(min)) {
+      filters.push(`inventory_total:>=${min}`);
+    }
   }
-}
 
-if (params.stockMax !== undefined && params.stockMax !== null) {
-  const max = Number(params.stockMax);
-  if (!isNaN(max)) {
-    filters.push(`inventory_total:<=${max}`);
+  if (params.stockMax !== undefined && params.stockMax !== null) {
+    const max = Number(params.stockMax);
+    if (!isNaN(max)) {
+      filters.push(`inventory_total:<=${max}`);
+    }
   }
-}
 
   const categories = normalizeArray(params.categories);
 
