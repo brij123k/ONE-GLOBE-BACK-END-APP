@@ -9,6 +9,8 @@ import { OptimizationModule } from './api/optimization/optimization.module';
 import { MetaModule } from './api/meta/meta.module';
 import { ImageSeoModule } from './api/image-seo/image-seo.module';
 import { PricingModule } from './api/pricing/pricing.module';
+import { SkuModule } from './api/SKU/sku.module';
+import { reviertModule } from './api/reviert/reviert.module';
 @Module({
   imports: [
     ConfigModule.forRoot({isGlobal: true}),
@@ -20,6 +22,8 @@ import { PricingModule } from './api/pricing/pricing.module';
    MetaModule,
    ImageSeoModule,
    PricingModule,
+   SkuModule,
+   reviertModule
   ],
   controllers: [AppController],
   providers: [AppService],
