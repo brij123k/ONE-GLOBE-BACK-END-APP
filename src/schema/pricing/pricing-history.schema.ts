@@ -11,6 +11,12 @@ export class PricingHistory {
   @Prop({ required: true })
   productId: string;
 
+  @Prop({required:true})
+  oldPrice:number;
+
+  @Prop({required:true})
+  newPrice:number;
+
   @Prop({ required: true })
   productTitle: string;
 

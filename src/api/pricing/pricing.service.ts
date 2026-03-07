@@ -54,6 +54,8 @@ export class PricingService {
         productTitle: string;
         variants: any[];
         minProfit: number;
+        oldPrice?:number;
+        newPrice?:number;
         discount: number;
     }) {
         return this.pricingHistoryModel.create(data);

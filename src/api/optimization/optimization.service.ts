@@ -29,6 +29,7 @@ import { OptimizedPricing } from 'src/schema/pricing/optimized-pricing.schema';
 import { COLLECTION_PRODUCTS_QUERY } from 'src/graphql/collection-products.query';
 import { buildProductSearchQuery } from 'src/utils/product-query.builder';
 import { PRODUCTS_QUERY } from 'src/graphql/products.query';
+import { SkuOptimization } from 'src/schema/sku/skuOptimization.schema';
 @Injectable()
 export class OptimizationService {
     constructor(
@@ -59,6 +60,9 @@ export class OptimizationService {
         @InjectModel(OptimizedPricing.name)
         private pricingModel: Model<OptimizedPricing>,
 
+        @InjectModel(SkuOptimization.name)
+        private skuModel: Model<SkuOptimization>,
+
         @InjectModel(Shop.name)
         private shopModel: Model<Shop>,
     ) { }
@@ -71,6 +75,7 @@ export class OptimizationService {
             metaDescription: this.MetaDescriptionModel,
             handle: this.MetaHandleModel,
             pricing: this.pricingModel,
+            sku: this.skuModel
         };
 
         return map[serviceName];
@@ -164,6 +169,23 @@ export class OptimizationService {
                     variants,
                 });
                 break;
+            case 'sku':
+                const skuVariants =
+                    product.variants?.edges?.map((v) => ({
+                        shopId,
+                        productId: product.id,
+                        inventoryItemId:v.node.inventoryItem.id,
+                        title: product.title,
+                        handle: product.handle,
+                        vender: product.vendor,
+                        productType: product.productType || 'No Product Type Found',
+                        productImage: image,
+                        variantId: v.node.id,
+                        sku: v.node.sku || 'No SKU Found',
+                    })) || [];
+
+                documents.push(...skuVariants);
+                break;
         }
     }
     private async shopifyRequest(
@@ -171,23 +193,23 @@ export class OptimizationService {
         accessToken: string,
         query: string,
         variables: any,
-      ) {
+    ) {
         const url = `https://${shopDomain}/admin/api/2026-01/graphql.json`;
-    
+
         const { data } = await axios.post(
-          url,
-          { query, variables },
-          {
-            headers: {
-              'X-Shopify-Access-Token': accessToken,
-              'Content-Type': 'application/json',
+            url,
+            { query, variables },
+            {
+                headers: {
+                    'X-Shopify-Access-Token': accessToken,
+                    'Content-Type': 'application/json',
+                },
             },
-          },
         );
-    
+
         if (data.errors) throw data.errors;
         return data.data;
-      }
+    }
     private async fetchProduct(shopDomain: string, token: string, productId: string) {
         const url = `https://${shopDomain}/admin/api/2026-01/graphql.json`;
 
@@ -298,6 +320,26 @@ export class OptimizationService {
                         variants,
                     });
                     break;
+
+                case 'sku':
+                    const skuVariants =
+                        product.variants?.edges?.map((v) => ({
+                            shopId,
+                            productId,
+                            inventoryItemId:v.node.inventoryItem.id,
+                            title: product.title,
+                            handle: product.handle,
+                            vender: product.vendor,
+                            productType: product.productType || 'No Product Type Found',
+                            productImage: image,
+                            variantId: v.node.id,
+                            sku: v.node.sku || 'No SKU Found',
+                        })) || [];
+
+                    documents.push(...skuVariants);
+                    break;
+
+
             }
         }
 

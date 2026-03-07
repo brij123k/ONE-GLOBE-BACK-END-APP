@@ -1,7 +1,7 @@
 export const UPDATE_VARIANT_SKU_MUTATION = `
-mutation updateVariantSKU($input: ProductVariantInput!) {
-  productVariantUpdate(input: $input) {
-    productVariant {
+mutation inventoryItemUpdate($id: ID!, $input: InventoryItemInput!) {
+  inventoryItemUpdate(id: $id, input: $input) {
+    inventoryItem {
       id
       sku
     }

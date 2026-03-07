@@ -144,7 +144,11 @@ export class ReviertService {
         input.seo = {
           description: record.oldMetaDescription,
         };
-      } else {
+      }
+      else if (valueKey === 'handle') {
+        input[valueKey] = record.oldMetaHandle;
+      }
+      else {
         input[valueKey] =
           record[`old${valueKey.charAt(0).toUpperCase() + valueKey.slice(1)}`];
       }
@@ -209,6 +213,12 @@ export class ReviertService {
           finalProductIds,
         );
       case 'handle':
+        return this.getRevertData(
+          this.metaHandleModel,
+          shopId,
+          finalProductIds,
+        );
+      case 'pricing':
         return this.getRevertData(
           this.metaHandleModel,
           shopId,

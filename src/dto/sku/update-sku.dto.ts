@@ -2,6 +2,13 @@ import { IsArray, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class SkuUpdateItem {
+
+  @IsString()
+  inventoryItemId: string;
+
+  @IsString()
+  productId: string;
+
   @IsString()
   variantId: string;
 

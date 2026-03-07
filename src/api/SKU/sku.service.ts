@@ -85,44 +85,88 @@ export class SkuService {
   }
 
 async updateSku(shopId: string, dto: UpdateSkuDto) {
+
   const shop = await this.getShop(shopId);
 
   const results: UpdateResult[] = [];
 
   for (const item of dto.updates) {
-    const response = await this.shopifyRequest(
-      shop.shopDomain,
-      shop.accessToken,
-      UPDATE_VARIANT_SKU_MUTATION,
-      {
-        input: {
-          id: item.variantId,
-          sku: item.newSku,
+
+    if (item.oldSku === item.newSku) {
+      results.push({
+        variantId: item.variantId,
+        oldSku: item.oldSku,
+        newSku: item.newSku,
+        status: 'skipped',
+      });
+      continue;
+    }
+
+    try {
+
+      const response = await this.shopifyRequest(
+        shop.shopDomain,
+        shop.accessToken,
+        UPDATE_VARIANT_SKU_MUTATION,
+        {
+          id: item.inventoryItemId,
+          input: {
+            sku: item.newSku,
+          },
         },
-      },
-    );
+      );
 
-    const errors = response.productVariantUpdate.userErrors;
-    if (errors.length) throw errors;
+      const errors = response.inventoryItemUpdate.userErrors;
 
-    await this.skuHistoryModel.create({
-      shopId,
-      variantId: item.variantId,
-      oldSku: item.oldSku,
-      newSku: item.newSku,
-    });
+      if (errors && errors.length) {
 
-    results.push({
-      variantId: item.variantId,
-      oldSku: item.oldSku,
-      newSku: item.newSku,
-      status: 'updated',
-    });
+        console.error('Shopify SKU Error:', errors);
+
+        results.push({
+          variantId: item.variantId,
+          oldSku: item.oldSku,
+          newSku: item.newSku,
+          status: 'failed',
+        });
+
+        continue;
+      }
+
+      // Save history
+      await this.skuHistoryModel.create({
+        shopId,
+        variantId: item.variantId,
+        oldSku: item.oldSku,
+        newSku: item.newSku,
+      });
+
+      results.push({
+        variantId: item.variantId,
+        oldSku: item.oldSku,
+        newSku: item.newSku,
+        status: 'updated',
+      });
+
+    } catch (error) {
+
+      console.error(
+        'SKU UPDATE ERROR:',
+        error?.response?.data || error.message || error,
+      );
+
+      results.push({
+        variantId: item.variantId,
+        oldSku: item.oldSku,
+        newSku: item.newSku,
+        status: 'error',
+      });
+
+    }
   }
 
   return {
-    message: 'SKU updated successfully',
-    updatedCount: results.length,
+    message: 'SKU update process completed',
+    updatedCount: results.filter(r => r.status === 'updated').length,
     results,
   };
 }

@@ -55,6 +55,7 @@ query getProduct($id: ID!) {
           }
 
           inventoryItem {
+            id
             unitCost {
               amount
             }

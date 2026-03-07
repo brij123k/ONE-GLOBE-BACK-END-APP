@@ -23,7 +23,7 @@ import { OptimizedMetaTitle,OptimizedMetaTitleSchema } from 'src/schema/meta-tit
 import { OptimizedMetaDescription, OptimizedMetaDescriptionSchema } from 'src/schema/meta-description/optimized-meta-description.schema';
 import { OptimizedMetaHandle, OptimizedMetaHandleSchema } from 'src/schema/meta-handle/optimized-meta-handle.schema';
 import { OptimizedPricing, OptimizedPricingSchema } from 'src/schema/pricing/optimized-pricing.schema';
-
+import { SkuOptimization,SkuOptimizationSchema } from 'src/schema/sku/skuOptimization.schema';
 // import { OptimizedImage,OptimizedImageSchema } from 'src/schema/image/optimized-image.schema';
 @Module({
   imports: [
@@ -41,6 +41,7 @@ import { OptimizedPricing, OptimizedPricingSchema } from 'src/schema/pricing/opt
       { name: OptimizedMetaDescription.name, schema: OptimizedMetaDescriptionSchema },
       { name: OptimizedMetaHandle.name, schema: OptimizedMetaHandleSchema },
       { name: OptimizedPricing.name, schema: OptimizedPricingSchema },
+      { name: SkuOptimization.name, schema: SkuOptimizationSchema },
       // { name: OptimizedImage.name, schema: OptimizedImageSchema },
     ]),
   ],

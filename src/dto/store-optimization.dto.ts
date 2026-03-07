@@ -37,8 +37,8 @@ class OptimizationFiltersDto {
   updatedAfter?: string;
 }
 export class StoreOptimizationDto {
-  @IsIn(['title', 'description','metaTitle','metaDescription','handle','image','pricing'])
-  serviceName: 'title' | 'description' | 'metaTitle' | 'metaDescription' | 'handle' | 'image' | 'pricing';
+  @IsIn(['title', 'description','metaTitle','metaDescription','handle','image','pricing','sku'])
+  serviceName: 'title' | 'description' | 'metaTitle' | 'metaDescription' | 'handle' | 'image' | 'pricing' | 'sku';
 
   @IsArray()
   @IsOptional()

@@ -11,6 +11,14 @@ export class ApplyPricingDto {
   @IsNumber()
   discount?: number;
 
+  @IsOptional()
+  @IsNumber()
+  oldPrice?: number;
+
+  @IsOptional()
+  @IsNumber()
+  newPrice?: number;
+
   @IsArray()
   variants: {
     variantId: string;
