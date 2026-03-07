@@ -9,6 +9,7 @@ import {
   IsInt,
   Min,
   Max,
+  IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -32,6 +33,11 @@ export class AIDescriptionOptimizationDto {
   @IsString()
   tone?: string;
 
+    /* ---------------- BRAND CONTAXT ---------------- */
+  @IsOptional()
+  @IsString()
+  brandContext?: string;
+
 
   /* ---------------- LENGTH ---------------- */
   @IsOptional()
@@ -46,6 +52,11 @@ export class AIDescriptionOptimizationDto {
   @IsArray()
   @ArrayNotEmpty()
   blocks: string[];
+
+
+  @IsOptional()
+  @IsObject()
+  blockInputs?: Record<string, any>;
 
 
   /* ---------------- KEYWORDS ---------------- */

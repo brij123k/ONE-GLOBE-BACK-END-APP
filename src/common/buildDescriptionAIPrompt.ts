@@ -2,6 +2,21 @@ export function buildDescriptionAIPrompt(
   product: any,
   input: any,
 ): string {
+
+  const blocksSection = input.blocks
+    .map((block: string) => {
+      const blockInput = input.blockInputs?.[block];
+
+      if (!blockInput) {
+        return `BLOCK: ${block}`;
+      }
+
+      return `BLOCK: ${block}
+BLOCK INSTRUCTIONS:
+${blockInput}`;
+    })
+    .join('\n\n');
+
   return `
 You are an expert Shopify product description copywriter.
 
@@ -17,29 +32,39 @@ Vendor: ${product.vendor || 'N/A'}
 Product Type: ${product.productType || 'N/A'}
 
 ━━━━━━━━━━━━━━━━━━━━━━
-STRUCTURE & FORMAT
+DESCRIPTION STRUCTURE
 ━━━━━━━━━━━━━━━━━━━━━━
-- Description format: ${input.formatName}
-- Use the following sections IN THIS EXACT ORDER:
-${input.blocks.map((b: string) => `- ${b}`).join('\n')}
+Description format: ${input.formatName}
 
-RULES FOR EACH SECTION:
-- Each section MUST start with an <h2> heading
-- The heading text should be a human-friendly version of the block name
+Generate the description using the following blocks
+IN THIS EXACT ORDER.
+
+${blocksSection}
+
+RULES FOR EACH BLOCK:
+- Each block MUST start with an <h2> heading
+- The heading should be a natural human-readable version of the block name
 - Content must be inside <p>, <ul>, <li> where appropriate
 - Use bullet lists (<ul><li>) for features or specifications
-- Do NOT skip any section
-- Do NOT add extra sections
+- Follow block instructions when provided
+- Do NOT skip any block
+- Do NOT add extra blocks
 
 ━━━━━━━━━━━━━━━━━━━━━━
 SEO & CONTENT RULES
 ━━━━━━━━━━━━━━━━━━━━━━
-- Target length: approximately ${input.targetLength} words (±10%)
-- Tone: ${input.tone || 'Professional'}
-- Include these keywords naturally:
-  ${input.includeKeywords?.length ? input.includeKeywords.join(', ') : 'None'}
-- Do NOT use these keywords:
-  ${input.excludeKeywords?.length ? input.excludeKeywords.join(', ') : 'None'}
+Target length: approximately ${input.targetLength} words (±10%)
+
+Tone: ${input.tone || 'Professional'}
+
+Include these keywords naturally:
+${input.includeKeywords?.length ? input.includeKeywords.join(', ') : 'None'}
+
+Do NOT use these keywords:
+${input.excludeKeywords?.length ? input.excludeKeywords.join(', ') : 'None'}
+
+Brand Context:
+${input.brandContext || 'None'}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 STRICT OUTPUT INSTRUCTIONS
@@ -50,7 +75,7 @@ STRICT OUTPUT INSTRUCTIONS
 - No emojis
 - No quotes
 - No <html>, <head>, or <body> tags
-- Use semantic, Shopify-safe HTML only
-- The output MUST be directly usable as product description HTML
+- Use semantic Shopify-safe HTML only
+- Output must be ready to save directly as a Shopify product description
 `;
 }

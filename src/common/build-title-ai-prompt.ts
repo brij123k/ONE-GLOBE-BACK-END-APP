@@ -16,8 +16,13 @@ Product Info:
 
 Rules:
 - Character length: ${input.minCharacters}-${input.maxCharacters}
+- Category Name: ${input.categoryName || 'None'}
 - Primary Element: ${input.primaryElement || 'None'}
 - Secondary Element: ${input.secondaryElement || 'None'}
+- Third Element: ${input.thirdElement || 'None'}
+- Fourth Element: ${input.fourthElement || 'None'}
+- Formula Pattern: ${input.formulaPattern || 'None'}
+- Brand Focused: ${input.brandFocused || 'None'}
 - Must include keywords: ${input.mustIncludeKeywords || 'None'}
 - Exclude keywords: ${input.excludeKeywords || 'None'}
 - Tone: ${input.tone || 'Professional'}

@@ -4,21 +4,40 @@ import axios from 'axios';
 import { Model } from 'mongoose';
 import { ShopifyService } from 'src/common/shopify/shopify.service';
 import { PRODUCTIDS_QUERY } from 'src/graphql/productIds.query';
+import { UPDATE_PRODUCT_DESCRIPTION_MUTATION } from 'src/graphql/update-product-description';
+import { UPDATE_PRODUCT_Handle_MUTATION } from 'src/graphql/update-product-handle';
+import { UPDATE_PRODUCT_META_MUTATION } from 'src/graphql/update-product-meta-title';
 import { UPDATE_PRODUCT_TITLE_MUTATION } from 'src/graphql/update-product-title';
+import { ClassicDescriptionOptimized } from 'src/schema/descriptions/classic-description-optimized.schema';
+import { MetaDescription } from 'src/schema/meta-description/classic-meta-description.schema';
+import { MetaHandle } from 'src/schema/meta-handle/classic-meta-handle.schema';
+import { MetaTitle } from 'src/schema/meta-title/classic-meta-title.schema';
 import { Shop } from 'src/schema/shop.schema';
 import { ClassicTitleOptimized } from 'src/schema/title/classic-title-optimized.schema';
 import { buildProductSearchQuery } from 'src/utils/product-query.builder';
-
 @Injectable()
 export class ReviertService {
-    constructor(
-        private readonly shopifyService: ShopifyService,
-        @InjectModel(Shop.name) private shopModel: Model<Shop>,
-        @InjectModel(ClassicTitleOptimized.name)
-        private titleModel: Model<ClassicTitleOptimized>,
-    ) { }
+  constructor(
+    private readonly shopifyService: ShopifyService,
+    @InjectModel(Shop.name) private shopModel: Model<Shop>,
 
-private async shopifyRequest(
+    @InjectModel(ClassicTitleOptimized.name)
+    private titleModel: Model<ClassicTitleOptimized>,
+
+    @InjectModel(ClassicDescriptionOptimized.name)
+    private descriptionModel: Model<ClassicDescriptionOptimized>,
+
+    @InjectModel(MetaTitle.name)
+    private metaTitleModel: Model<MetaTitle>,
+
+    @InjectModel(MetaDescription.name)
+    private metaDescriptionModel: Model<MetaDescription>,
+
+    @InjectModel(MetaHandle.name)
+    private metaHandleModel: Model<MetaHandle>,
+  ) { }
+
+  private async shopifyRequest(
     shopDomain: string,
     accessToken: string,
     query: string,
@@ -41,166 +60,235 @@ private async shopifyRequest(
     return data.data;
   }
 
-    async reviertGet(
-  shopId: string,
-  serviceName: string,
-  filters?: any,
-  productIds?: string[],
-) {
-  const shop = await this.shopModel.findById(shopId).lean();
-  if (!shop) throw new Error('Invalid shop');
+  /* ---------------------------------------------------- */
+  /* REUSABLE: GET PRODUCT IDS                            */
+  /* ---------------------------------------------------- */
 
-  switch (serviceName) {
-    case 'title':
-      return this.getTitleRevert(shopId, shop, filters, productIds);
+  private async getProductIds(
+    shop: any,
+    filters?: any,
+    productIds?: string[],
+  ): Promise<string[]> {
+    if (productIds?.length) return productIds;
 
-    default:
-      throw new Error('Invalid serviceName');
-  }
-}
+    if (!filters) return [];
 
-async revertSave(
-  shopId: string,
-  serviceName: string,
-  filters?: any,
-  productIds?: string[],
-) {
-  const shop = await this.shopModel.findById(shopId).lean();
-  if (!shop) throw new Error('Invalid shop');
-
-  switch (serviceName) {
-    case 'title':
-      return this.revertTitle(shopId, shop, filters, productIds);
-
-    default:
-      throw new Error('Invalid serviceName');
-  }
-}
-
-    async getTitleRevert(
-  shopId: string,
-  shop: any,
-  filters?: any,
-  productIds?: string[],
-) {
-  let finalProductIds: string[] = [];
-
-  // ==============================
-  // CASE 1: productIds provided
-  // ==============================
-  if (productIds && productIds.length > 0) {
-    finalProductIds = productIds;
-  }
-
-  // ==============================
-  // CASE 2: No productIds → Use Filters
-  // ==============================
-  else if (filters) {
     const { query } = buildProductSearchQuery(filters);
 
-    const variables = {
-      query,
-      first: 250, // no pagination, just max limit
-    };
-
     const data = await this.shopifyRequest(
       shop.shopDomain,
       shop.accessToken,
       PRODUCTIDS_QUERY,
-      variables,
-    );
-
-    const shopifyProducts = data.products.edges || [];
-
-    finalProductIds = shopifyProducts.map(
-      (edge: any) => edge.node.id,
-    );
-  }
-
-  // ==============================
-  // If still no IDs → return empty
-  // ==============================
-  if (!finalProductIds.length) {
-    return [];
-  }
-
-  // ==============================
-  // Get Only Existing Data from DB
-  // ==============================
-  const existingData = await this.titleModel.find({
-    shopId,
-    productId: { $in: finalProductIds },
-  });
-
-  return existingData;
-}
-
-async revertTitle(
-  shopId: string,
-  shop: any,
-  filters?: any,
-  productIds?: string[],
-) {
-  let finalProductIds: string[] = [];
-  if (productIds && productIds.length > 0) {
-    finalProductIds = productIds;
-  }
-
-  else if (filters) {
-  const { query } = buildProductSearchQuery(filters);
-
-    const variables = {
-      query,
-      first: 250,
-    };
-
-    const data = await this.shopifyRequest(
-      shop.shopDomain,
-      shop.accessToken,
-      PRODUCTIDS_QUERY,
-      variables,
-    );
-
-    finalProductIds = data.products.edges.map(
-      (edge: any) => edge.node.id,
-    );
-  }
-
-  if (!finalProductIds.length) {
-    return { success: true, reverted: 0 };
-  }
-
-  const revertRecords = await this.titleModel.find({
-    shopId,
-    productId: { $in: finalProductIds },
-  });
-
-  if (!revertRecords.length) {
-    return { success: true, reverted: 0 };
-  }
-
-  let revertedCount = 0;
-
-  for (const record of revertRecords) {
-    await this.shopifyRequest(
-      shop.shopDomain,
-      shop.accessToken,
-      UPDATE_PRODUCT_TITLE_MUTATION,
       {
-        input: {
-          id: record.productId,
-          title: record.oldTitle,
-        },
+        query,
+        first: 250,
       },
     );
-    await this.titleModel.deleteOne({productId:record.productId})
-    revertedCount++;
+
+    return (data.products.edges || []).map((edge: any) => edge.node.id);
   }
 
-  return {
-    success: true,
-    reverted: revertedCount,
-  };
-}
+  /* ---------------------------------------------------- */
+  /* REUSABLE: GET REVERT DATA                            */
+  /* ---------------------------------------------------- */
 
+  private async getRevertData(
+    model: Model<any>,
+    shopId: string,
+    productIds: string[],
+  ) {
+    if (!productIds.length) return [];
+
+    return model.find({
+      shopId,
+      productId: { $in: productIds },
+    });
+  }
+
+  /* ---------------------------------------------------- */
+  /* REUSABLE: REVERT PRODUCTS                            */
+  /* ---------------------------------------------------- */
+
+  private async revertProducts(
+    model: Model<any>,
+    shop: any,
+    shopId: string,
+    productIds: string[],
+    mutation: string,
+    valueKey: string,
+  ) {
+    if (!productIds.length) {
+      return { success: true, reverted: 0 };
+    }
+
+    const revertRecords = await this.getRevertData(
+      model,
+      shopId,
+      productIds,
+    );
+
+    if (!revertRecords.length) {
+      return { success: true, reverted: 0 };
+    }
+
+    let revertedCount = 0;
+
+    for (const record of revertRecords) {
+      let input: any = { id: record.productId };
+
+      if (valueKey === 'seo.title') {
+        input.seo = {
+          title: record.oldMetaTitle,
+        };
+      } else if (valueKey === 'seo.description') {
+        input.seo = {
+          description: record.oldMetaDescription,
+        };
+      } else {
+        input[valueKey] =
+          record[`old${valueKey.charAt(0).toUpperCase() + valueKey.slice(1)}`];
+      }
+
+      await this.shopifyRequest(
+        shop.shopDomain,
+        shop.accessToken,
+        mutation,
+        { input },
+      );
+
+      await model.deleteOne({ productId: record.productId });
+
+      revertedCount++;
+    }
+
+    return {
+      success: true,
+      reverted: revertedCount,
+    };
+  }
+
+  async reviertGet(
+    shopId: string,
+    serviceName: string,
+    filters?: any,
+    productIds?: string[],
+  ) {
+    const shop = await this.shopModel.findById(shopId).lean();
+    if (!shop) throw new Error('Invalid shop');
+
+    const finalProductIds = await this.getProductIds(
+      shop,
+      filters,
+      productIds,
+    );
+
+    switch (serviceName) {
+      case 'title':
+        return this.getRevertData(
+          this.titleModel,
+          shopId,
+          finalProductIds,
+        );
+
+      case 'description':
+        return this.getRevertData(
+          this.descriptionModel,
+          shopId,
+          finalProductIds,
+        );
+      case 'metaTitle':
+        return this.getRevertData(
+          this.metaTitleModel,
+          shopId,
+          finalProductIds,
+        );
+      case 'metaDescription':
+        return this.getRevertData(
+          this.metaDescriptionModel,
+          shopId,
+          finalProductIds,
+        );
+      case 'handle':
+        return this.getRevertData(
+          this.metaHandleModel,
+          shopId,
+          finalProductIds,
+        );
+
+      default:
+        throw new Error('Invalid serviceName');
+    }
+  }
+
+  /* ---------------------------------------------------- */
+  /* SAVE REVERT                                          */
+  /* ---------------------------------------------------- */
+
+  async revertSave(
+    shopId: string,
+    serviceName: string,
+    filters?: any,
+    productIds?: string[],
+  ) {
+    const shop = await this.shopModel.findById(shopId).lean();
+    if (!shop) throw new Error('Invalid shop');
+
+    const finalProductIds = await this.getProductIds(
+      shop,
+      filters,
+      productIds,
+    );
+
+    switch (serviceName) {
+      case 'title':
+        return this.revertProducts(
+          this.titleModel,
+          shop,
+          shopId,
+          finalProductIds,
+          UPDATE_PRODUCT_TITLE_MUTATION,
+          'title',
+        );
+
+      case 'description':
+        return this.revertProducts(
+          this.descriptionModel,
+          shop,
+          shopId,
+          finalProductIds,
+          UPDATE_PRODUCT_DESCRIPTION_MUTATION,
+          'descriptionHtml',
+        );
+      case 'metaTitle':
+        return this.revertProducts(
+          this.metaTitleModel,
+          shop,
+          shopId,
+          finalProductIds,
+          UPDATE_PRODUCT_META_MUTATION,
+          'seo.title',
+        );
+      case 'metaDescription':
+        return this.revertProducts(
+          this.metaDescriptionModel,
+          shop,
+          shopId,
+          finalProductIds,
+          UPDATE_PRODUCT_META_MUTATION,
+          'seo.description',
+        );
+      case 'handle':
+        return this.revertProducts(
+          this.metaHandleModel,
+          shop,
+          shopId,
+          finalProductIds,
+          UPDATE_PRODUCT_Handle_MUTATION,
+          'handle',
+        );
+
+      default:
+        throw new Error('Invalid serviceName');
+    }
+  }
 }

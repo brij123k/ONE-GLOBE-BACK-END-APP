@@ -21,6 +21,22 @@ export class AITitleOptimizationDto {
   @IsString()
   secondaryElement?: string;
 
+    @IsOptional()
+  @IsString()
+  thirdElement?: string;
+
+  @IsOptional()
+  @IsString()
+  fourthElement?: string;
+
+  @IsOptional()
+  @IsString()
+  formulaPattern?: string;
+
+   @IsOptional()
+  @IsBoolean()
+  brandFocused?: boolean;
+
   @IsOptional()
   @IsString()
   mustIncludeKeywords?: string;
