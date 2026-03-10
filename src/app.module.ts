@@ -11,6 +11,9 @@ import { ImageSeoModule } from './api/image-seo/image-seo.module';
 import { PricingModule } from './api/pricing/pricing.module';
 import { SkuModule } from './api/SKU/sku.module';
 import { reviertModule } from './api/reviert/reviert.module';
+import { VendorModule } from './api/vender/vendor.module';
+import { ImageModule } from './api/image/image.module';
+import { ProductTypeModule } from './api/product-type/product-type.module';
 @Module({
   imports: [
     ConfigModule.forRoot({isGlobal: true}),
@@ -23,7 +26,10 @@ import { reviertModule } from './api/reviert/reviert.module';
    ImageSeoModule,
    PricingModule,
    SkuModule,
-   reviertModule
+   reviertModule,
+   VendorModule,
+   ImageModule,
+   ProductTypeModule
   ],
   controllers: [AppController],
   providers: [AppService],

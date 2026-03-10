@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Model } from 'mongoose';
 import { ShopifyService } from 'src/common/shopify/shopify.service';
 import { PRODUCTIDS_QUERY } from 'src/graphql/productIds.query';
+import { UPDATE_VARIANT_SKU_MUTATION } from 'src/graphql/sku/update-variant-sku.mutation';
 import { UPDATE_PRODUCT_DESCRIPTION_MUTATION } from 'src/graphql/update-product-description';
 import { UPDATE_PRODUCT_Handle_MUTATION } from 'src/graphql/update-product-handle';
 import { UPDATE_PRODUCT_META_MUTATION } from 'src/graphql/update-product-meta-title';
@@ -13,6 +14,7 @@ import { MetaDescription } from 'src/schema/meta-description/classic-meta-descri
 import { MetaHandle } from 'src/schema/meta-handle/classic-meta-handle.schema';
 import { MetaTitle } from 'src/schema/meta-title/classic-meta-title.schema';
 import { Shop } from 'src/schema/shop.schema';
+import { SkuHistory } from 'src/schema/sku/sku-history.schema';
 import { ClassicTitleOptimized } from 'src/schema/title/classic-title-optimized.schema';
 import { buildProductSearchQuery } from 'src/utils/product-query.builder';
 @Injectable()
@@ -35,6 +37,9 @@ export class ReviertService {
 
     @InjectModel(MetaHandle.name)
     private metaHandleModel: Model<MetaHandle>,
+
+     @InjectModel(SkuHistory.name)
+    private skuHistoryModel: Model<SkuHistory>,
   ) { }
 
   private async shopifyRequest(
@@ -60,10 +65,6 @@ export class ReviertService {
     return data.data;
   }
 
-  /* ---------------------------------------------------- */
-  /* REUSABLE: GET PRODUCT IDS                            */
-  /* ---------------------------------------------------- */
-
   private async getProductIds(
     shop: any,
     filters?: any,
@@ -88,17 +89,13 @@ export class ReviertService {
     return (data.products.edges || []).map((edge: any) => edge.node.id);
   }
 
-  /* ---------------------------------------------------- */
-  /* REUSABLE: GET REVERT DATA                            */
-  /* ---------------------------------------------------- */
-
   private async getRevertData(
     model: Model<any>,
     shopId: string,
     productIds: string[],
   ) {
     if (!productIds.length) return [];
-
+    console.log(model,shopId,productIds)
     return model.find({
       shopId,
       productId: { $in: productIds },
@@ -224,6 +221,12 @@ export class ReviertService {
           shopId,
           finalProductIds,
         );
+      case 'sku':
+        return this.getRevertData(
+          this.skuHistoryModel,
+          shopId,
+          finalProductIds,
+        );
 
       default:
         throw new Error('Invalid serviceName');
@@ -295,6 +298,15 @@ export class ReviertService {
           finalProductIds,
           UPDATE_PRODUCT_Handle_MUTATION,
           'handle',
+        );
+      case 'sku':
+        return this.revertProducts(
+          this.skuHistoryModel,
+          shop,
+          shopId,
+          finalProductIds,
+          UPDATE_VARIANT_SKU_MUTATION,
+          'sku',
         );
 
       default:
