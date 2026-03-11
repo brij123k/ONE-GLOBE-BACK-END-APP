@@ -169,6 +169,29 @@ async generateImageAlt(prompt: string): Promise<string> {
     .replace(/["\n]/g, '')
     .trim();
 }
+async generateImageName(prompt: string): Promise<string> {
+  const response = await this.groq.chat.completions.create({
+    model: 'llama-3.3-70b-versatile',
+    messages: [
+      {
+        role: 'system',
+        content: 'You generate SEO-friendly Image Name text for Shopify images.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+    temperature: 0.5,
+    max_tokens: 120,
+  });
+
+  return (
+    response.choices[0].message.content || ''
+  )
+    .replace(/["\n]/g, '')
+    .trim();
+}
 
 
 

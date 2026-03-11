@@ -5,11 +5,13 @@ import { Model } from 'mongoose';
 import { ShopifyService } from 'src/common/shopify/shopify.service';
 import { PRODUCTIDS_QUERY } from 'src/graphql/productIds.query';
 import { UPDATE_VARIANT_SKU_MUTATION } from 'src/graphql/sku/update-variant-sku.mutation';
+import { UPDATE_IMAGE_ALT_MUTATION } from 'src/graphql/update-image-alt.mutation';
 import { UPDATE_PRODUCT_DESCRIPTION_MUTATION } from 'src/graphql/update-product-description';
 import { UPDATE_PRODUCT_Handle_MUTATION } from 'src/graphql/update-product-handle';
 import { UPDATE_PRODUCT_META_MUTATION } from 'src/graphql/update-product-meta-title';
 import { UPDATE_PRODUCT_TITLE_MUTATION } from 'src/graphql/update-product-title';
 import { ClassicDescriptionOptimized } from 'src/schema/descriptions/classic-description-optimized.schema';
+import { ImageAltHistory } from 'src/schema/image/image-alt-history.schema';
 import { MetaDescription } from 'src/schema/meta-description/classic-meta-description.schema';
 import { MetaHandle } from 'src/schema/meta-handle/classic-meta-handle.schema';
 import { MetaTitle } from 'src/schema/meta-title/classic-meta-title.schema';
@@ -17,6 +19,7 @@ import { Shop } from 'src/schema/shop.schema';
 import { SkuHistory } from 'src/schema/sku/sku-history.schema';
 import { ClassicTitleOptimized } from 'src/schema/title/classic-title-optimized.schema';
 import { buildProductSearchQuery } from 'src/utils/product-query.builder';
+
 @Injectable()
 export class ReviertService {
   constructor(
@@ -38,7 +41,10 @@ export class ReviertService {
     @InjectModel(MetaHandle.name)
     private metaHandleModel: Model<MetaHandle>,
 
-     @InjectModel(SkuHistory.name)
+    @InjectModel(ImageAltHistory.name)
+    private imageAltHistoryModel: Model<ImageAltHistory>,
+
+    @InjectModel(SkuHistory.name)
     private skuHistoryModel: Model<SkuHistory>,
   ) { }
 
@@ -94,14 +100,31 @@ export class ReviertService {
     shopId: string,
     productIds: string[],
   ) {
-    if (!productIds.length) return [];
-    console.log(model,shopId,productIds)
-    return model.find({
-      shopId,
-      productId: { $in: productIds },
-    });
-  }
 
+    if (!productIds.length) return [];
+
+    return model.aggregate([
+      {
+        $match: {
+          shopId,
+          productId: { $in: productIds },
+        },
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $group: {
+          _id: "$productId",
+          latest: { $first: "$$ROOT" },
+        },
+      },
+      {
+        $replaceRoot: { newRoot: "$latest" },
+      },
+    ]);
+
+  }
   /* ---------------------------------------------------- */
   /* REUSABLE: REVERT PRODUCTS                            */
   /* ---------------------------------------------------- */
@@ -144,6 +167,28 @@ export class ReviertService {
       }
       else if (valueKey === 'handle') {
         input[valueKey] = record.oldMetaHandle;
+      }
+      else if (valueKey === 'alt') {
+
+        const files = [
+          {
+            id: record.imageId,
+            alt: record.oldAlt,
+          },
+        ];
+
+        await this.shopifyRequest(
+          shop.shopDomain,
+          shop.accessToken,
+          mutation,
+          { files },
+        );
+
+        await model.deleteOne({ productId: record.productId });
+
+        revertedCount++;
+
+        continue;
       }
       else {
         input[valueKey] =
@@ -218,6 +263,12 @@ export class ReviertService {
       case 'pricing':
         return this.getRevertData(
           this.metaHandleModel,
+          shopId,
+          finalProductIds,
+        );
+      case 'imageALT':
+        return this.getRevertData(
+          this.imageAltHistoryModel,
           shopId,
           finalProductIds,
         );
@@ -298,6 +349,15 @@ export class ReviertService {
           finalProductIds,
           UPDATE_PRODUCT_Handle_MUTATION,
           'handle',
+        );
+      case 'imageALT':
+        return this.revertProducts(
+          this.imageAltHistoryModel,
+          shop,
+          shopId,
+          finalProductIds,
+          UPDATE_IMAGE_ALT_MUTATION,
+          'alt',
         );
       case 'sku':
         return this.revertProducts(

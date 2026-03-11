@@ -30,6 +30,8 @@ import { COLLECTION_PRODUCTS_QUERY } from 'src/graphql/collection-products.query
 import { buildProductSearchQuery } from 'src/utils/product-query.builder';
 import { PRODUCTS_QUERY } from 'src/graphql/products.query';
 import { SkuOptimization } from 'src/schema/sku/skuOptimization.schema';
+import { ImageAltOptimization } from 'src/schema/image/image-alt-optimization.schema';
+import { ImageNameOptimization } from 'src/schema/image/image-name-optimization.schema';
 @Injectable()
 export class OptimizationService {
     constructor(
@@ -63,6 +65,12 @@ export class OptimizationService {
         @InjectModel(SkuOptimization.name)
         private skuModel: Model<SkuOptimization>,
 
+        @InjectModel(ImageAltOptimization.name)
+        private imageAltModel: Model<ImageAltOptimization>,
+
+        @InjectModel(ImageNameOptimization.name)
+        private imageNameModel: Model<ImageNameOptimization>,
+
         @InjectModel(Shop.name)
         private shopModel: Model<Shop>,
     ) { }
@@ -75,7 +83,9 @@ export class OptimizationService {
             metaDescription: this.MetaDescriptionModel,
             handle: this.MetaHandleModel,
             pricing: this.pricingModel,
-            sku: this.skuModel
+            sku: this.skuModel,
+            imageALT: this.imageAltModel,
+            imageName: this.imageNameModel
         };
 
         return map[serviceName];
@@ -174,7 +184,7 @@ export class OptimizationService {
                     product.variants?.edges?.map((v) => ({
                         shopId,
                         productId: product.id,
-                        inventoryItemId:v.node.inventoryItem.id,
+                        inventoryItemId: v.node.inventoryItem.id,
                         title: product.title,
                         handle: product.handle,
                         vender: product.vendor,
@@ -185,6 +195,70 @@ export class OptimizationService {
                     })) || [];
 
                 documents.push(...skuVariants);
+                break;
+            case 'imageALT':
+
+                const images =
+                    product.media?.edges
+                        ?.filter((img) => img.node.mediaContentType === 'IMAGE')
+                        ?.map((img) => {
+
+                            const imageNode = img.node;
+                            const variant = product.variants?.edges?.[0]?.node;
+
+                            const imageUrl = imageNode.image?.url || null;
+                            const imageName = imageUrl ? imageUrl.split('/').pop() : null;
+
+                            return {
+                                shopId,
+                                productId: product.id,
+                                productTitle: product.title,
+
+                                variantId: variant?.id || null,
+                                variantTitle: variant?.title || null,
+
+                                inventoryItemId: variant?.inventoryItem?.id || null,
+
+                                imageId: imageNode.id,
+
+                                imageName,
+                                imageUrl,
+                                altText: imageNode.alt || '',
+                            };
+
+                        }) || [];
+
+                documents.push(...images);
+
+                break;
+
+
+            case 'imageName':
+
+                const imageNames =
+                    product.media?.edges
+                        ?.filter((img) => img.node.mediaContentType === 'IMAGE')
+                        ?.map((img) => {
+
+                            const imageNode = img.node;
+
+                            const imageUrl = imageNode.image?.url || null;
+                            const imageName = imageUrl ? imageUrl.split('/').pop() : null;
+
+                            return {
+                                shopId,
+                                productId: product.id,
+                                productTitle: product.title,
+
+                                imageId: imageNode.id,
+                                imageUrl,
+                                imageName,
+                            };
+
+                        }) || [];
+
+                documents.push(...imageNames);
+
                 break;
         }
     }
@@ -281,8 +355,8 @@ export class OptimizationService {
                         shopId,
                         productId,
                         productImage: image,
-                        description: product.description || '',
-                        metaDescription: product.seo?.description || '',
+                        description: product.description || 'No Description',
+                        metaDescription: product.seo?.description || 'No Description',
                     });
                     break;
 
@@ -326,7 +400,7 @@ export class OptimizationService {
                         product.variants?.edges?.map((v) => ({
                             shopId,
                             productId,
-                            inventoryItemId:v.node.inventoryItem.id,
+                            inventoryItemId: v.node.inventoryItem.id,
                             title: product.title,
                             handle: product.handle,
                             vender: product.vendor,
@@ -337,6 +411,69 @@ export class OptimizationService {
                         })) || [];
 
                     documents.push(...skuVariants);
+                    break;
+
+                case 'imageALT':
+
+                    const altImages =
+                        product.media?.edges
+                            ?.filter(img => img.node.mediaContentType === 'IMAGE')
+                            ?.map(img => {
+
+                                const node = img.node;
+                                const variant = product.variants?.edges?.[0]?.node;
+
+                                const imageUrl = node.image?.url || null;
+                                const imageName = imageUrl ? imageUrl.split('/').pop() : null;
+
+                                return {
+                                    shopId,
+                                    productId,
+                                    productTitle: product.title,
+
+                                    variantId: variant?.id || null,
+                                    variantTitle: variant?.title || null,
+
+                                    inventoryItemId: variant?.inventoryItem?.id || null,
+
+                                    imageId: node.id,
+
+                                    imageName,
+                                    imageUrl,
+                                    altText: node.alt || '',
+                                };
+                            }) || [];
+
+                    documents.push(...altImages);
+
+                    break;
+
+                case 'imageName':
+
+                    const imageNames =
+                        product.media?.edges
+                            ?.filter(img => img.node.mediaContentType === 'IMAGE')
+                            ?.map(img => {
+
+                                const node = img.node;
+
+                                const imageUrl = node.image?.url || null;
+                                const imageName = imageUrl ? imageUrl.split('/').pop() : null;
+
+                                return {
+                                    shopId,
+                                    productId,
+                                    productTitle: product.title,
+
+                                    imageId: node.id,
+                                    imageUrl,
+                                    imageName,
+                                };
+
+                            }) || [];
+
+                    documents.push(...imageNames);
+
                     break;
 
 

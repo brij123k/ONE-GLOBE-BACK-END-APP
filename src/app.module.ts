@@ -7,7 +7,7 @@ import { ShopModule } from './api/shop/shop.module';
 import { AuthModule } from './api/auth/auth.module';
 import { OptimizationModule } from './api/optimization/optimization.module';
 import { MetaModule } from './api/meta/meta.module';
-import { ImageSeoModule } from './api/image-seo/image-seo.module';
+// import { ImageSeoModule } from './api/image-seo/image-seo.module';
 import { PricingModule } from './api/pricing/pricing.module';
 import { SkuModule } from './api/SKU/sku.module';
 import { reviertModule } from './api/reviert/reviert.module';
@@ -23,7 +23,7 @@ import { ProductTypeModule } from './api/product-type/product-type.module';
    AuthModule,
    OptimizationModule,
    MetaModule,
-   ImageSeoModule,
+  //  ImageSeoModule,
    PricingModule,
    SkuModule,
    reviertModule,

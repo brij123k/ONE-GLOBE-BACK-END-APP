@@ -25,6 +25,8 @@ import { OptimizedMetaHandle, OptimizedMetaHandleSchema } from 'src/schema/meta-
 import { OptimizedPricing, OptimizedPricingSchema } from 'src/schema/pricing/optimized-pricing.schema';
 import { SkuOptimization,SkuOptimizationSchema } from 'src/schema/sku/skuOptimization.schema';
 // import { OptimizedImage,OptimizedImageSchema } from 'src/schema/image/optimized-image.schema';
+import { ImageAltOptimization,ImageAltOptimizationSchema } from 'src/schema/image/image-alt-optimization.schema';
+import { ImageNameOptimization,ImageNameOptimizationSchema } from 'src/schema/image/image-name-optimization.schema';
 @Module({
   imports: [
     AuthModule,
@@ -42,6 +44,8 @@ import { SkuOptimization,SkuOptimizationSchema } from 'src/schema/sku/skuOptimiz
       { name: OptimizedMetaHandle.name, schema: OptimizedMetaHandleSchema },
       { name: OptimizedPricing.name, schema: OptimizedPricingSchema },
       { name: SkuOptimization.name, schema: SkuOptimizationSchema },
+      { name: ImageAltOptimization.name, schema: ImageAltOptimizationSchema },
+      { name: ImageNameOptimization.name, schema: ImageNameOptimizationSchema },
       // { name: OptimizedImage.name, schema: OptimizedImageSchema },
     ]),
   ],

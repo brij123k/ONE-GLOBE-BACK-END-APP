@@ -11,6 +11,8 @@ import { MetaTitle,MetaTitleSchema } from "src/schema/meta-title/classic-meta-ti
 import { MetaDescription,MetaDescriptionSchema } from "src/schema/meta-description/classic-meta-description.schema";
 import { MetaHandle,MetaHandleSchema } from "src/schema/meta-handle/classic-meta-handle.schema";
 import { SkuHistory,SkuHistorySchema } from "src/schema/sku/sku-history.schema";
+import { ImageAltHistory,ImageAltHistorySchema } from "src/schema/image/image-alt-history.schema";
+
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -19,6 +21,7 @@ import { SkuHistory,SkuHistorySchema } from "src/schema/sku/sku-history.schema";
       { name: MetaTitle.name, schema: MetaTitleSchema },
       { name: MetaDescription.name, schema: MetaDescriptionSchema },
       { name: MetaHandle.name, schema: MetaHandleSchema },
+      { name: ImageAltHistory.name, schema: ImageAltHistorySchema },
       { name: SkuHistory.name, schema: SkuHistorySchema },
       { name: Shop.name, schema: ShopSchema },
     ]),

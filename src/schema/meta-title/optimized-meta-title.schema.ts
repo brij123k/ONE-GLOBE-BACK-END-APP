@@ -20,6 +20,10 @@ export class OptimizedMetaTitle {
 
   @Prop()
   productImage: string;
+
+  @Prop({default:false})
+  optimized:boolean
+  
 }
 
 export const OptimizedMetaTitleSchema =

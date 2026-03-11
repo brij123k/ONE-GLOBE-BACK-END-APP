@@ -1,11 +1,16 @@
-export const CREATE_PRODUCT_IMAGE_MUTATION = `
-mutation productCreateMedia($productId: ID!, $media: [CreateMediaInput!]!) {
-  productCreateMedia(productId: $productId, media: $media) {
-    media {
-      id
-      alt
+export const UPDATE_IMAGE_NAME_MUTATION = `
+mutation fileUpdate($files: [FileUpdateInput!]!) {
+  fileUpdate(files: $files) {
+    files {
+      ... on MediaImage {
+        id
+        alt
+        image {
+          url
+        }
+      }
     }
-    mediaUserErrors {
+    userErrors {
       field
       message
     }

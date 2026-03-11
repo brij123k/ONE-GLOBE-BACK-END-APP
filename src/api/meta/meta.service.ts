@@ -22,17 +22,25 @@ import { UPDATE_PRODUCT_Handle_MUTATION } from 'src/graphql/update-product-handl
 import { MetaHandle,MetaHandleDocument } from 'src/schema/meta-handle/classic-meta-handle.schema';
 import { buildMetaDescriptionAIPrompt } from 'src/common/buildMetaDesAIPrompt';
 import { buildProductHandleAIPrompt } from 'src/common/buildHandlePrompt';
+import { OptimizedMetaDescription } from 'src/schema/meta-description/optimized-meta-description.schema';
+import { OptimizedMetaTitle } from 'src/schema/meta-title/optimized-meta-title.schema';
 @Injectable()
 export class MetaService {
   constructor(
     @InjectModel(MetaTitle.name)
     private metaTitleOptimizedModel: Model<MetaTitleDocument>,
 
+    @InjectModel(OptimizedMetaTitle.name)
+            private MetaTitleModel: Model<OptimizedMetaTitle>,
     @InjectModel(MetaDescription.name)
     private metadescriptionOptimizedModel: Model<MetaDescriptionDocument>,
 
+    @InjectModel(OptimizedMetaDescription.name)
+    private MetaDescriptionModel: Model<OptimizedMetaDescription>,
+
     @InjectModel(MetaHandle.name)
     private metaHandleDocumentModel: Model<MetaHandleDocument>,
+    
     private readonly aiService: AiService,
 
     private readonly shopifyService: ShopifyService,
@@ -70,11 +78,6 @@ export class MetaService {
 
   // 4️⃣ Clean AI response
   aiMetaTitle = aiMetaTitle.replace(/["']/g, '').trim();
-
-  // 5️⃣ Optional length enforcement (SEO best practice: ≤ 60 chars)
-  // if (aiMetaTitle.length > 60) {
-  //   aiMetaTitle = aiMetaTitle.slice(0, 60).trim();
-  // }
 
   // 6️⃣ Apply immediately if requested
   if (dto.apply === true) {
@@ -133,7 +136,6 @@ export class MetaService {
 
   // 3️⃣ Call Groq AI
   let aiMetaDescription = await this.aiService.generateMetaDescription(prompt);
-  console.log(aiMetaDescription,"1")
   // 4️⃣ Clean AI response
   aiMetaDescription = aiMetaDescription.trim();
 
@@ -258,7 +260,11 @@ async generateAIMetaHandle(
 
   const errors = response.productUpdate.userErrors;
   if (errors.length) throw errors;
-
+    await this.MetaTitleModel.findOneAndUpdate(
+  { productId: dto.productId },
+  { $set: { optimized: true,metaTitle:dto.newMetaTitle } },
+  { new: true }
+);
   // 2️⃣ Store optimization history
   return this.metaTitleOptimizedModel.create({
     shopId,
@@ -294,7 +300,11 @@ async generateAIMetaHandle(
 
   const errors = response.productUpdate.userErrors;
   if (errors.length) throw errors;
-
+  await this.MetaDescriptionModel.findOneAndUpdate(
+  { productId: dto.productId },
+  { $set: { optimized: true,metaDescription:dto.newMetaDescription } },
+  { new: true }
+);
   // 2️⃣ Store optimization history
   return this.metadescriptionOptimizedModel.create({
     shopId,

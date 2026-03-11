@@ -20,6 +20,10 @@ import { AiService } from 'src/config/ai.service';
 import { MetaTitle,MetaTitleSchema } from 'src/schema/meta-title/classic-meta-title.schema';
 import { MetaDescription,MetaDescriptionSchema } from 'src/schema/meta-description/classic-meta-description.schema';
 import { MetaHandle,MetaHandleSchema } from 'src/schema/meta-handle/classic-meta-handle.schema';
+import { OptimizedMetaDescription,OptimizedMetaDescriptionSchema } from 'src/schema/meta-description/optimized-meta-description.schema';
+import { ClassicTitleOptimized, ClassicTitleOptimizedSchema } from 'src/schema/title/classic-title-optimized.schema';
+import { ClassicDescriptionOptimized, ClassicDescriptionOptimizedSchema } from 'src/schema/descriptions/classic-description-optimized.schema';
+import { OptimizedMetaTitle, OptimizedMetaTitleSchema } from 'src/schema/meta-title/optimized-meta-title.schema';
 @Module({
   imports: [
     AuthModule,
@@ -30,6 +34,12 @@ import { MetaHandle,MetaHandleSchema } from 'src/schema/meta-handle/classic-meta
     MongooseModule.forFeature([
       { name: MetaTitle.name, schema: MetaTitleSchema },
       { name: MetaDescription.name, schema: MetaDescriptionSchema },
+      { name: OptimizedTitle.name, schema: OptimizedTitleSchema },
+      { name: OptimizedDescription.name, schema: OptimizedDescriptionSchema },
+      { name: ClassicTitleOptimized.name, schema: ClassicTitleOptimizedSchema },
+      { name: ClassicDescriptionOptimized.name, schema: ClassicDescriptionOptimizedSchema },
+      { name: OptimizedMetaTitle.name, schema: OptimizedMetaTitleSchema },
+      { name: OptimizedMetaDescription.name, schema: OptimizedMetaDescriptionSchema },
       { name: MetaHandle.name, schema: MetaHandleSchema },
     ]),
   ],

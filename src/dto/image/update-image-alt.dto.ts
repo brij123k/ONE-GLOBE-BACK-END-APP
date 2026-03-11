@@ -1,7 +1,7 @@
 import { IsArray, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
-class ImageAltItem {
+export class ImageAltItem {
 
   @IsString()
   productId: string;

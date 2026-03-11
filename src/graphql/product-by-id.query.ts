@@ -37,6 +37,21 @@ query getProduct($id: ID!) {
         }
       }
     }
+      media(first: 10) {
+      edges {
+        node {
+          id
+          mediaContentType
+          ... on MediaImage {
+            id
+            alt
+            image {
+              url
+            }
+          }
+        }
+      }
+    }
 
     variants(first: 100) {
       edges {

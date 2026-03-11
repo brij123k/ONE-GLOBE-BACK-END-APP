@@ -20,6 +20,9 @@ export class OptimizedMetaDescription {
 
   @Prop()
   productImage: string;
+
+  @Prop({default:false})
+  optimized:boolean;
 }
 
 export const OptimizedMetaDescriptionSchema =
