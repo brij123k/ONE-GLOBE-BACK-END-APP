@@ -1,6 +1,6 @@
 import { IsArray, IsString } from 'class-validator';
 
-export class UpdateVendorItem {
+export class UpdateVendorDto {
 
   @IsString()
   productId: string;
@@ -10,12 +10,5 @@ export class UpdateVendorItem {
 
   @IsString()
   newVendor: string;
-
-}
-
-export class UpdateVendorDto {
-
-  @IsArray()
-  updates: UpdateVendorItem[];
 
 }

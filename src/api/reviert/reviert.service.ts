@@ -3,21 +3,27 @@ import { InjectModel } from '@nestjs/mongoose';
 import axios from 'axios';
 import { Model } from 'mongoose';
 import { ShopifyService } from 'src/common/shopify/shopify.service';
+import { UPDATE_IMAGE_NAME_MUTATION } from 'src/graphql/create-product-image.mutation';
 import { PRODUCTIDS_QUERY } from 'src/graphql/productIds.query';
+import { UPDATE_PRODUCT_TYPE_MUTATION } from 'src/graphql/productTypes/update-product-type.mutation';
 import { UPDATE_VARIANT_SKU_MUTATION } from 'src/graphql/sku/update-variant-sku.mutation';
 import { UPDATE_IMAGE_ALT_MUTATION } from 'src/graphql/update-image-alt.mutation';
 import { UPDATE_PRODUCT_DESCRIPTION_MUTATION } from 'src/graphql/update-product-description';
 import { UPDATE_PRODUCT_Handle_MUTATION } from 'src/graphql/update-product-handle';
 import { UPDATE_PRODUCT_META_MUTATION } from 'src/graphql/update-product-meta-title';
 import { UPDATE_PRODUCT_TITLE_MUTATION } from 'src/graphql/update-product-title';
+import { UPDATE_VENDOR_MUTATION } from 'src/graphql/vendor/update-vendor.mutation';
 import { ClassicDescriptionOptimized } from 'src/schema/descriptions/classic-description-optimized.schema';
 import { ImageAltHistory } from 'src/schema/image/image-alt-history.schema';
+import { ImageNameHistory } from 'src/schema/image/image-name-history.schema';
 import { MetaDescription } from 'src/schema/meta-description/classic-meta-description.schema';
 import { MetaHandle } from 'src/schema/meta-handle/classic-meta-handle.schema';
 import { MetaTitle } from 'src/schema/meta-title/classic-meta-title.schema';
+import { ProductTypeHistory } from 'src/schema/product-type/product-type-history.schema';
 import { Shop } from 'src/schema/shop.schema';
 import { SkuHistory } from 'src/schema/sku/sku-history.schema';
 import { ClassicTitleOptimized } from 'src/schema/title/classic-title-optimized.schema';
+import { VendorHistory } from 'src/schema/vendor/vendor-history.schema';
 import { buildProductSearchQuery } from 'src/utils/product-query.builder';
 
 @Injectable()
@@ -43,6 +49,15 @@ export class ReviertService {
 
     @InjectModel(ImageAltHistory.name)
     private imageAltHistoryModel: Model<ImageAltHistory>,
+
+    @InjectModel(ImageNameHistory.name)
+    private imageNameHistoryModel: Model<ImageNameHistory>,
+    
+    @InjectModel(ProductTypeHistory.name)
+    private productTypeHistoryModel: Model<ProductTypeHistory>,
+    
+    @InjectModel(VendorHistory.name)
+    private vendorHistoryModel: Model<VendorHistory>,
 
     @InjectModel(SkuHistory.name)
     private skuHistoryModel: Model<SkuHistory>,
@@ -190,6 +205,28 @@ export class ReviertService {
 
         continue;
       }
+      else if(valueKey=="imageName"){
+        const newFileName = `${record.oldName}.${record.oldExtension}`;
+        console.log(newFileName,"1")
+        const files = [
+          {
+            id: record.imageId,
+            filename: newFileName,
+          },
+        ];
+        await this.shopifyRequest(
+          shop.shopDomain,
+          shop.accessToken,
+          mutation,
+          { files },
+        );
+
+        await model.deleteOne({ productId: record.productId });
+
+        revertedCount++;
+
+        continue;
+      }
       else {
         input[valueKey] =
           record[`old${valueKey.charAt(0).toUpperCase() + valueKey.slice(1)}`];
@@ -272,9 +309,27 @@ export class ReviertService {
           shopId,
           finalProductIds,
         );
+      case 'imageName':
+        return this.getRevertData(
+          this.imageNameHistoryModel,
+          shopId,
+          finalProductIds,
+        );
       case 'sku':
         return this.getRevertData(
           this.skuHistoryModel,
+          shopId,
+          finalProductIds,
+        );
+      case 'productType':
+        return this.getRevertData(
+          this.productTypeHistoryModel,
+          shopId,
+          finalProductIds,
+        );
+      case 'vendor':
+        return this.getRevertData(
+          this.vendorHistoryModel,
           shopId,
           finalProductIds,
         );
@@ -359,6 +414,15 @@ export class ReviertService {
           UPDATE_IMAGE_ALT_MUTATION,
           'alt',
         );
+      case 'imageName':
+        return this.revertProducts(
+          this.imageNameHistoryModel,
+          shop,
+          shopId,
+          finalProductIds,
+          UPDATE_IMAGE_NAME_MUTATION,
+          'imageName',
+        );
       case 'sku':
         return this.revertProducts(
           this.skuHistoryModel,
@@ -369,6 +433,24 @@ export class ReviertService {
           'sku',
         );
 
+      case 'productType':
+        return this.revertProducts(
+          this.productTypeHistoryModel,
+          shop,
+          shopId,
+          finalProductIds,
+          UPDATE_PRODUCT_TYPE_MUTATION,
+          'productType',
+        );
+      case 'vendor':
+        return this.revertProducts(
+          this.vendorHistoryModel,
+          shop,
+          shopId,
+          finalProductIds,
+          UPDATE_VENDOR_MUTATION,
+          'vendor',
+        );
       default:
         throw new Error('Invalid serviceName');
     }

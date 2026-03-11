@@ -7,11 +7,12 @@ import { Shop } from 'src/schema/shop.schema';
 import { ProductTypeHistory } from 'src/schema/product-type/product-type-history.schema';
 import { UpdateProductTypeDto } from 'src/dto/product-type/update-product-type.dto';
 import { UPDATE_PRODUCT_TYPE_MUTATION } from 'src/graphql/update-product-type.mutation';
-
-export interface ProductTypeResult {
-  productId: string;
-  status: 'updated' | 'skipped' | 'failed' | 'error';
-}
+import { AiService } from 'src/config/ai.service';
+import { ShopifyService } from 'src/common/shopify/shopify.service';
+import { OptimizeProductTypeDto } from 'src/dto/product-type/optimize-product-type.dto';
+import { PRODUCT_TYPE_AI_QUERY } from 'src/graphql/productTypes/product-type-ai.query';
+import { buildProductTypePrompt } from 'src/common/buildProductTypePrompt';
+import { AIProductTypeSuggestionDto } from 'src/dto/product-type/ai-product-type-suggestion.dto';
 
 @Injectable()
 export class ProductTypeService {
@@ -22,116 +23,142 @@ export class ProductTypeService {
 
     @InjectModel(ProductTypeHistory.name)
     private productTypeHistoryModel: Model<ProductTypeHistory>,
+
+    private readonly aiService: AiService,
+    private readonly shopifyService: ShopifyService,
   ) {}
 
-  private async getShop(shopId: string) {
-    const shop = await this.shopModel.findById(shopId).lean();
-    if (!shop) throw new Error('Invalid shop');
-    return shop;
-  }
 
-  private async shopifyRequest(
-    shopDomain: string,
-    accessToken: string,
-    query: string,
-    variables: any,
+
+  async generateAIProductType(
+    shopId: string,
+    dto: OptimizeProductTypeDto,
   ) {
 
-    const url = `https://${shopDomain}/admin/api/2026-01/graphql.json`;
+    const shop = await this.shopModel.findById(shopId).lean();
+    if (!shop) throw new Error("Invalid shop");
 
-    const { data } = await axios.post(
-      url,
-      { query, variables },
-      {
-        headers: {
-          'X-Shopify-Access-Token': accessToken,
-          'Content-Type': 'application/json',
-        },
-      },
+    const response = await this.shopifyService.shopifyRequest(
+      shop.shopDomain,
+      shop.accessToken,
+      PRODUCT_TYPE_AI_QUERY,
+      { id: dto.productId },
     );
 
-    if (data.errors) throw data.errors;
+    const product = response.product;
+    if (!product) throw new Error("Product not found");
 
-    return data.data;
-  }
+    const oldProductType = product.productType || "";
 
-  async updateProductType(shopId: string, dto: UpdateProductTypeDto) {
+    const prompt = buildProductTypePrompt(product);
 
-    const shop = await this.getShop(shopId);
+    let aiProductType = await this.aiService.generateProductType(prompt);
 
-    const results: ProductTypeResult[] = [];
+    aiProductType = aiProductType.replace(/["']/g, "").trim();
 
-    for (const item of dto.updates) {
 
-      if (item.oldProductType === item.newProductType) {
 
-        results.push({
-          productId: item.productId,
-          status: 'skipped',
-        });
+    if (dto.apply === true) {
 
-        continue;
-      }
+      const applied = await this.updateProductType(shopId, {
+        productId: dto.productId,
+        oldProductType,
+        newProductType: aiProductType,
+      });
 
-      try {
-
-        const response = await this.shopifyRequest(
-          shop.shopDomain,
-          shop.accessToken,
-          UPDATE_PRODUCT_TYPE_MUTATION,
-          {
-            input: {
-              id: item.productId,
-              productType: item.newProductType,
-            },
-          },
-        );
-
-        const errors = response.productUpdate.userErrors;
-
-        if (errors?.length) {
-
-          console.error("PRODUCT TYPE UPDATE ERROR:", errors);
-
-          results.push({
-            productId: item.productId,
-            status: 'failed',
-          });
-
-          continue;
-        }
-
-        await this.productTypeHistoryModel.create({
-          shopId,
-          productId: item.productId,
-          oldProductType: item.oldProductType,
-          newProductType: item.newProductType,
-        });
-
-        results.push({
-          productId: item.productId,
-          status: 'updated',
-        });
-
-      } catch (error) {
-
-        console.error("PRODUCT TYPE UPDATE ERROR:", error);
-
-        results.push({
-          productId: item.productId,
-          status: 'error',
-        });
-
-      }
-
+      return {
+        applied: true,
+        productId: dto.productId,
+        oldProductType,
+        newProductType: aiProductType,
+        result: applied,
+      };
     }
 
+
     return {
-      message: 'Product Type update completed',
-      updatedCount: results.filter(r => r.status === 'updated').length,
-      results,
+      productId: dto.productId,
+      oldProductType,
+      newProductType: aiProductType,
+    };
+  }
+
+
+
+  async getAIProductTypeSuggestions(
+    shopId: string,
+    dto: AIProductTypeSuggestionDto,
+  ) {
+
+    const prompt = `
+You are an ecommerce SEO expert.
+
+Optimize and normalize the following Shopify product types.
+
+Product Types:
+${dto.productTypes.join("\n")}
+
+Rules:
+- remove duplicates
+- simplify naming
+- keep SEO friendly
+- return a clean list
+
+Return result as comma separated list.
+`;
+
+    const aiResponse = await this.aiService.generateProductType(prompt);
+
+    return {
+      suggestions: aiResponse.split(",").map(v => v.trim())
+    };
+  }
+
+
+
+  async updateProductType(
+    shopId: string,
+    dto: UpdateProductTypeDto,
+  ) {
+
+    const shop = await this.shopModel.findById(shopId).lean();
+    if (!shop) throw new Error("Invalid shop");
+
+
+    const response = await this.shopifyService.shopifyRequest(
+      shop.shopDomain,
+      shop.accessToken,
+      UPDATE_PRODUCT_TYPE_MUTATION,
+      {
+        input: {
+          id: dto.productId,
+          productType: dto.newProductType,
+        }
+      }
+    );
+
+
+    const errors = response.productUpdate.userErrors;
+
+    if (errors?.length) {
+      throw new Error(JSON.stringify(errors));
+    }
+
+
+    await this.productTypeHistoryModel.create({
+      shopId,
+      productId: dto.productId,
+      oldProductType: dto.oldProductType,
+      newProductType: dto.newProductType,
+    });
+
+
+    return {
+      message: "Product type updated successfully",
+      updatedCount:1
     };
 
   }
+
 
 }

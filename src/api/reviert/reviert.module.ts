@@ -12,7 +12,9 @@ import { MetaDescription,MetaDescriptionSchema } from "src/schema/meta-descripti
 import { MetaHandle,MetaHandleSchema } from "src/schema/meta-handle/classic-meta-handle.schema";
 import { SkuHistory,SkuHistorySchema } from "src/schema/sku/sku-history.schema";
 import { ImageAltHistory,ImageAltHistorySchema } from "src/schema/image/image-alt-history.schema";
-
+import { ImageNameHistory,ImageNameHistorySchema } from "src/schema/image/image-name-history.schema";
+import { VendorHistory, VendorHistorySchema } from "src/schema/vendor/vendor-history.schema";
+import { ProductTypeHistory, ProductTypeHistorySchema } from "src/schema/product-type/product-type-history.schema";
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -22,7 +24,10 @@ import { ImageAltHistory,ImageAltHistorySchema } from "src/schema/image/image-al
       { name: MetaDescription.name, schema: MetaDescriptionSchema },
       { name: MetaHandle.name, schema: MetaHandleSchema },
       { name: ImageAltHistory.name, schema: ImageAltHistorySchema },
+      { name: ImageNameHistory.name, schema: ImageNameHistorySchema },
       { name: SkuHistory.name, schema: SkuHistorySchema },
+      { name: ProductTypeHistory.name, schema: ProductTypeHistorySchema },
+      { name: VendorHistory.name, schema: VendorHistorySchema },
       { name: Shop.name, schema: ShopSchema },
     ]),
     ShopifyModule

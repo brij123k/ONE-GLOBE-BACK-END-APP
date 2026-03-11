@@ -16,7 +16,7 @@ export class VendorController {
     @Req() req,
     @Body() dto: UpdateVendorDto
   ) {
-    return this.vendorService.updateVendor(
+    return this.vendorService.updateProductType(
       req.user.shopId,
       dto,
     );

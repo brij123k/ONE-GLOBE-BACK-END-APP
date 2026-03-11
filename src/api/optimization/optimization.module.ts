@@ -27,6 +27,8 @@ import { SkuOptimization,SkuOptimizationSchema } from 'src/schema/sku/skuOptimiz
 // import { OptimizedImage,OptimizedImageSchema } from 'src/schema/image/optimized-image.schema';
 import { ImageAltOptimization,ImageAltOptimizationSchema } from 'src/schema/image/image-alt-optimization.schema';
 import { ImageNameOptimization,ImageNameOptimizationSchema } from 'src/schema/image/image-name-optimization.schema';
+import { ProductType, ProductTypeSchema } from 'src/schema/product-type/product-type.schema';
+import { Vendor, VendorSchema } from 'src/schema/vendor/vendor.schema';
 @Module({
   imports: [
     AuthModule,
@@ -46,6 +48,8 @@ import { ImageNameOptimization,ImageNameOptimizationSchema } from 'src/schema/im
       { name: SkuOptimization.name, schema: SkuOptimizationSchema },
       { name: ImageAltOptimization.name, schema: ImageAltOptimizationSchema },
       { name: ImageNameOptimization.name, schema: ImageNameOptimizationSchema },
+      { name: ProductType.name, schema: ProductTypeSchema },
+      { name: Vendor.name, schema: VendorSchema },
       // { name: OptimizedImage.name, schema: OptimizedImageSchema },
     ]),
   ],

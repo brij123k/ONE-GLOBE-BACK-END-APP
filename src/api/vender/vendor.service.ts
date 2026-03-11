@@ -7,6 +7,11 @@ import { UPDATE_PRODUCT_VENDOR_MUTATION } from 'src/graphql/update-product-vendo
 import { VendorHistory } from 'src/schema/vendor/vendor-history.schema';
 import { UpdateVendorDto } from 'src/dto/vender/update-vendor.dto';
 import axios from 'axios';
+import { OptimizeVendorDto } from 'src/dto/vender/optimize-vendor.dto';
+import { AiService } from 'src/config/ai.service';
+import { ShopifyService } from 'src/common/shopify/shopify.service';
+import { VENDOR_AI_QUERY } from 'src/graphql/vendor/vendor-ai.query';
+import { UPDATE_VENDOR_MUTATION } from 'src/graphql/vendor/update-vendor.mutation';
 export interface VendorUpdateResult { 
   productId: string;
   status: 'updated' | 'skipped' | 'failed' | 'error';
@@ -20,6 +25,9 @@ export class VendorService {
 
     @InjectModel(VendorHistory.name)
     private vendorHistoryModel: Model<VendorHistory>,
+
+    private readonly aiService: AiService,
+    private readonly shopifyService: ShopifyService,
   ) {}
 
   private async getShop(shopId: string) {
@@ -27,99 +35,49 @@ export class VendorService {
     if (!shop) throw new Error('Invalid shop');
     return shop;
   }
-  private async shopifyRequest(
-      shopDomain: string,
-      accessToken: string,
-      query: string,
-      variables: any,
+
+    async updateProductType(
+      shopId: string,
+      dto: UpdateVendorDto,
     ) {
-      const url = `https://${shopDomain}/admin/api/2026-01/graphql.json`;
   
-      const { data } = await axios.post(
-        url,
-        { query, variables },
+      const shop = await this.shopModel.findById(shopId).lean();
+      if (!shop) throw new Error("Invalid shop");
+  
+  
+      const response = await this.shopifyService.shopifyRequest(
+        shop.shopDomain,
+        shop.accessToken,
+        UPDATE_VENDOR_MUTATION,
         {
-          headers: {
-            'X-Shopify-Access-Token': accessToken,
-            'Content-Type': 'application/json',
-          },
-        },
+          input: {
+            id: dto.productId,
+            vendor: dto.newVendor,
+          }
+        }
       );
   
-      if (data.errors) throw data.errors;
-      return data.data;
-    }
-  async updateVendor(shopId: string, dto: UpdateVendorDto) {
-
-    const shop = await this.getShop(shopId);
-
-    const results: VendorUpdateResult[] = [];
-
-    for (const item of dto.updates) {
-
-      if (item.oldVendor === item.newVendor) {
-        results.push({
-          productId: item.productId,
-          status: 'skipped',
-        });
-        continue;
+  
+      const errors = response.productUpdate.userErrors;
+  
+      if (errors?.length) {
+        throw new Error(JSON.stringify(errors));
       }
-
-      try {
-
-        const response = await this.shopifyRequest(
-          shop.shopDomain,
-          shop.accessToken,
-          UPDATE_PRODUCT_VENDOR_MUTATION,
-          {
-            input: {
-              id: item.productId,
-              vendor: item.newVendor,
-            },
-          },
-        );
-
-        const errors = response.productUpdate.userErrors;
-
-        if (errors.length) {
-          results.push({
-            productId: item.productId,
-            status: 'failed',
-          });
-          continue;
-        }
-
-        await this.vendorHistoryModel.create({
-          shopId,
-          productId: item.productId,
-          oldVendor: item.oldVendor,
-          newVendor: item.newVendor,
-        });
-
-        results.push({
-          productId: item.productId,
-          status: 'updated',
-        });
-
-      } catch (error) {
-
-        console.error('VENDOR UPDATE ERROR:', error);
-
-        results.push({
-          productId: item.productId,
-          status: 'error',
-        });
-
-      }
-
+  
+  
+      await this.vendorHistoryModel.create({
+        shopId,
+        productId: dto.productId,
+        oldVendor: dto.oldVendor,
+        newVendor: dto.newVendor,
+      });
+  
+  
+      return {
+        message: "Product type updated successfully",
+        updatedCount:1
+      };
+  
     }
-
-    return {
-      message: 'Vendor update completed',
-      updatedCount: results.filter(r => r.status === 'updated').length,
-      results,
-    };
-
-  }
 
 }

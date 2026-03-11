@@ -32,6 +32,8 @@ import { PRODUCTS_QUERY } from 'src/graphql/products.query';
 import { SkuOptimization } from 'src/schema/sku/skuOptimization.schema';
 import { ImageAltOptimization } from 'src/schema/image/image-alt-optimization.schema';
 import { ImageNameOptimization } from 'src/schema/image/image-name-optimization.schema';
+import { ProductType } from 'src/schema/product-type/product-type.schema';
+import { Vendor } from 'src/schema/vendor/vendor.schema';
 @Injectable()
 export class OptimizationService {
     constructor(
@@ -71,6 +73,12 @@ export class OptimizationService {
         @InjectModel(ImageNameOptimization.name)
         private imageNameModel: Model<ImageNameOptimization>,
 
+        @InjectModel(ProductType.name)
+        private productType: Model<ProductType>,
+        
+        @InjectModel(Vendor.name)
+        private vendorModel: Model<Vendor>,
+
         @InjectModel(Shop.name)
         private shopModel: Model<Shop>,
     ) { }
@@ -85,7 +93,9 @@ export class OptimizationService {
             pricing: this.pricingModel,
             sku: this.skuModel,
             imageALT: this.imageAltModel,
-            imageName: this.imageNameModel
+            imageName: this.imageNameModel,
+            productType:this.productType,
+            vendor:this.vendorModel,
         };
 
         return map[serviceName];
@@ -259,6 +269,26 @@ export class OptimizationService {
 
                 documents.push(...imageNames);
 
+                break;
+
+            case 'productType':
+                documents.push({
+                    shopId,
+                    productId: product.id,
+                    productImage: image,
+                    title: product.title,
+                    productType: product.productType || 'Product Type Not Found',
+                });
+                break;
+
+            case 'vendor':
+                documents.push({
+                    shopId,
+                    productId: product.id,
+                    productImage: image,
+                    title: product.title,
+                    vendor: product.Vendor || 'Vendor Not Found',
+                });
                 break;
         }
     }
@@ -474,6 +504,25 @@ export class OptimizationService {
 
                     documents.push(...imageNames);
 
+                    break;
+
+                case 'productType':
+                    documents.push({
+                        shopId,
+                        productId,
+                        productImage: image,
+                        title: product.title,
+                        productType: product.productType || 'Product Type Not Found',
+                    });
+                    break;
+                case 'vendor':
+                    documents.push({
+                        shopId,
+                        productId,
+                        productImage: image,
+                        title: product.title,
+                        vendor: product.vendor || 'Vendor Not Found',
+                    });
                     break;
 
 

@@ -193,6 +193,30 @@ async generateImageName(prompt: string): Promise<string> {
     .trim();
 }
 
+async generateProductType(prompt: string): Promise<string> {
+  const response = await this.groq.chat.completions.create({
+    model: 'llama-3.3-70b-versatile',
+    messages: [
+      {
+        role: 'system',
+        content: 'You are an expert Shopify SEO Product Type optimizer.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+    temperature: 0.5,
+    max_tokens: 120,
+  });
+
+  return (
+    response.choices[0].message.content || ''
+  )
+    .replace(/["\n]/g, '')
+    .trim();
+}
+
 
 
 }

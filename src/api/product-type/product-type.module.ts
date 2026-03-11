@@ -9,16 +9,19 @@ import {
   ProductTypeHistory,
   ProductTypeHistorySchema,
 } from 'src/schema/product-type/product-type-history.schema';
+import { AiService } from 'src/config/ai.service';
+import { ShopifyModule } from 'src/common/shopify/shopify.module';
 
 @Module({
   imports: [
+    ShopifyModule,
     MongooseModule.forFeature([
       { name: Shop.name, schema: ShopSchema },
       { name: ProductTypeHistory.name, schema: ProductTypeHistorySchema },
     ]),
   ],
   controllers: [ProductTypeController],
-  providers: [ProductTypeService],
+  providers: [ProductTypeService,AiService],
   exports: [ProductTypeService],
 })
 export class ProductTypeModule {}
