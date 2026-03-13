@@ -10,7 +10,6 @@ query getProduct($id: ID!) {
     vendor
     productType
     tags
-
     seo {
       title
       description
@@ -34,6 +33,15 @@ query getProduct($id: ID!) {
           originalSrc
           width
           height
+        }
+      }
+    }
+    collections(first: 50) {
+      edges {
+        node {
+          id
+          title
+          handle
         }
       }
     }

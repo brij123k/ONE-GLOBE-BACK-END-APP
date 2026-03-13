@@ -14,6 +14,8 @@ import { reviertModule } from './api/reviert/reviert.module';
 import { VendorModule } from './api/vender/vendor.module';
 import { ImageModule } from './api/image/image.module';
 import { ProductTypeModule } from './api/product-type/product-type.module';
+import { CollectionBuilderModule } from './api/collection-builder/collection-builder.module';
+import { TagsBuilderModule } from './api/tag-builder/tags-builder.module';
 @Module({
   imports: [
     ConfigModule.forRoot({isGlobal: true}),
@@ -29,7 +31,9 @@ import { ProductTypeModule } from './api/product-type/product-type.module';
    reviertModule,
    VendorModule,
    ImageModule,
-   ProductTypeModule
+   ProductTypeModule,
+   CollectionBuilderModule,
+   TagsBuilderModule,
   ],
   controllers: [AppController],
   providers: [AppService],

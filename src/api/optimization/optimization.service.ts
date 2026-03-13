@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Collection, Model } from 'mongoose';
 
 import { OptimizedDescription } from 'src/schema/descriptions/optimized-description.schema';
 import { StoreOptimizationDto } from 'src/dto/store-optimization.dto';
@@ -34,6 +34,8 @@ import { ImageAltOptimization } from 'src/schema/image/image-alt-optimization.sc
 import { ImageNameOptimization } from 'src/schema/image/image-name-optimization.schema';
 import { ProductType } from 'src/schema/product-type/product-type.schema';
 import { Vendor } from 'src/schema/vendor/vendor.schema';
+import { CollectionProduct } from 'src/schema/collection_builder/collection_builder.schema';
+import { TagsProduct } from 'src/schema/tags-builder/tag_builder.schema';
 @Injectable()
 export class OptimizationService {
     constructor(
@@ -75,9 +77,15 @@ export class OptimizationService {
 
         @InjectModel(ProductType.name)
         private productType: Model<ProductType>,
-        
+
         @InjectModel(Vendor.name)
         private vendorModel: Model<Vendor>,
+
+        @InjectModel(CollectionProduct.name)
+        private collectionProductModel: Model<CollectionProduct>,
+        
+        @InjectModel(TagsProduct.name)
+        private tagsProductModel: Model<TagsProduct>,
 
         @InjectModel(Shop.name)
         private shopModel: Model<Shop>,
@@ -94,8 +102,10 @@ export class OptimizationService {
             sku: this.skuModel,
             imageALT: this.imageAltModel,
             imageName: this.imageNameModel,
-            productType:this.productType,
-            vendor:this.vendorModel,
+            productType: this.productType,
+            vendor: this.vendorModel,
+            collection: this.collectionProductModel,
+            tag: this.tagsProductModel
         };
 
         return map[serviceName];
@@ -115,7 +125,12 @@ export class OptimizationService {
     ) {
         const image =
             product?.featuredMedia?.preview?.image?.url || null;
-
+        const collections =
+product.collections?.edges?.map(e => ({
+  id: e.node.id,
+  title: e.node.title,
+  handle: e.node.handle
+})) || [];
         switch (serviceName) {
             case 'title':
                 documents.push({
@@ -290,6 +305,33 @@ export class OptimizationService {
                     vendor: product.Vendor || 'Vendor Not Found',
                 });
                 break;
+            case 'collection':
+
+                documents.push({
+                    shopId,
+                    productId: product.id,
+                    title: product.title,
+                    vendor: product.vendor,
+                    productType: product.productType,
+                    tags: product.tags || [],
+                    productImage: image,
+                    collections:collections || []
+                });
+
+                break;
+            case 'tag':
+
+                documents.push({
+                    shopId,
+                    productId: product.id,
+                    title: product.title,
+                    vendor: product.vendor,
+                    productType: product.productType,
+                    tags: product.tags || [],
+                    productImage: image,
+                });
+
+                break;
         }
     }
     private async shopifyRequest(
@@ -354,7 +396,12 @@ export class OptimizationService {
             if (!product) continue;
 
             const image = product.featuredMedia?.preview?.image?.url || null;
-
+            const collections =
+product.collections?.edges?.map(e => ({
+  id: e.node.id,
+  title: e.node.title,
+  handle: e.node.handle
+})) || [];
             switch (dto.serviceName) {
                 case 'title':
                     documents.push({ shopId, productId, productImage: image, title: product.title });
@@ -523,6 +570,35 @@ export class OptimizationService {
                         title: product.title,
                         vendor: product.vendor || 'Vendor Not Found',
                     });
+                    break;
+
+                case 'collection':
+
+                    documents.push({
+                        shopId,
+                        productId,
+                        title: product.title,
+                        vendor: product.vendor,
+                        productType: product.productType,
+                        tags: product.tags || [],
+                        productImage: image,
+                        collections:collections
+                    });
+
+                    break;
+
+                case 'tag':
+
+                    documents.push({
+                        shopId,
+                        productId,
+                        title: product.title,
+                        vendor: product.vendor,
+                        productType: product.productType,
+                        tags: product.tags || [],
+                        productImage: image,
+                    });
+
                     break;
 
 
