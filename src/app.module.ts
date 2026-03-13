@@ -16,6 +16,7 @@ import { ImageModule } from './api/image/image.module';
 import { ProductTypeModule } from './api/product-type/product-type.module';
 import { CollectionBuilderModule } from './api/collection-builder/collection-builder.module';
 import { TagsBuilderModule } from './api/tag-builder/tags-builder.module';
+import { SpeficiationModule } from './api/specifications/specifications.module';
 @Module({
   imports: [
     ConfigModule.forRoot({isGlobal: true}),
@@ -34,6 +35,7 @@ import { TagsBuilderModule } from './api/tag-builder/tags-builder.module';
    ProductTypeModule,
    CollectionBuilderModule,
    TagsBuilderModule,
+   SpeficiationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

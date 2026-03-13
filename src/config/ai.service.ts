@@ -241,5 +241,36 @@ async generateCategory(prompt: string): Promise<string> {
     .trim();
 }
 
+async generateImageAnalysis(prompt: string, imageUrl: string): Promise<string> {
+
+  const response = await this.groq.chat.completions.create({
+    model: "meta-llama/llama-4-scout-17b-16e-instruct",
+    messages: [
+      {
+        role: "system",
+        content: "You are an expert ecommerce product analyzer."
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: prompt
+          },
+          {
+            type: "image_url",
+            image_url: {
+              url: imageUrl
+            }
+          }
+        ]
+      }
+    ],
+    temperature: 0.3,
+    max_tokens: 500
+  });
+
+  return response.choices[0].message.content || "";
+}
 
 }

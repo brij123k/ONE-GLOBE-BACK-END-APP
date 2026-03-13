@@ -45,6 +45,11 @@ query getProduct($id: ID!) {
         }
       }
     }
+     metafield(namespace: "custom", key: "specification") {
+      id
+      value
+      type
+    }
       media(first: 10) {
       edges {
         node {

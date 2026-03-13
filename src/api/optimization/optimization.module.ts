@@ -31,6 +31,7 @@ import { ProductType, ProductTypeSchema } from 'src/schema/product-type/product-
 import { Vendor, VendorSchema } from 'src/schema/vendor/vendor.schema';
 import { CollectionProduct, CollectionProductSchema } from 'src/schema/collection_builder/collection_builder.schema';
 import { TagsProduct, TagsProductSchema } from 'src/schema/tags-builder/tag_builder.schema';
+import { Specification, SpecificationSchema } from 'src/schema/metafileds/specification.schema';
 @Module({
   imports: [
     AuthModule,
@@ -53,7 +54,8 @@ import { TagsProduct, TagsProductSchema } from 'src/schema/tags-builder/tag_buil
       { name: ProductType.name, schema: ProductTypeSchema },
       { name: Vendor.name, schema: VendorSchema },
       {name: CollectionProduct.name, schema:CollectionProductSchema},
-      {name: TagsProduct.name, schema:TagsProductSchema}
+      {name: TagsProduct.name, schema:TagsProductSchema},
+      {name: Specification.name, schema:SpecificationSchema}
     ]),
   ],
   controllers: [OptimizationController],

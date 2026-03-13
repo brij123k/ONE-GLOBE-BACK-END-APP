@@ -36,6 +36,8 @@ import { ProductType } from 'src/schema/product-type/product-type.schema';
 import { Vendor } from 'src/schema/vendor/vendor.schema';
 import { CollectionProduct } from 'src/schema/collection_builder/collection_builder.schema';
 import { TagsProduct } from 'src/schema/tags-builder/tag_builder.schema';
+import { Specification } from 'src/schema/metafileds/specification.schema';
+import { GET_PRODUCT_SPECIFICATIONS_QUERY } from 'src/graphql/metafields/get-product-specifications.query';
 @Injectable()
 export class OptimizationService {
     constructor(
@@ -83,9 +85,12 @@ export class OptimizationService {
 
         @InjectModel(CollectionProduct.name)
         private collectionProductModel: Model<CollectionProduct>,
-        
+
         @InjectModel(TagsProduct.name)
         private tagsProductModel: Model<TagsProduct>,
+
+        @InjectModel(Specification.name)
+        private specificationModel: Model<Specification>,
 
         @InjectModel(Shop.name)
         private shopModel: Model<Shop>,
@@ -105,7 +110,8 @@ export class OptimizationService {
             productType: this.productType,
             vendor: this.vendorModel,
             collection: this.collectionProductModel,
-            tag: this.tagsProductModel
+            tag: this.tagsProductModel,
+            specification: this.specificationModel
         };
 
         return map[serviceName];
@@ -126,11 +132,11 @@ export class OptimizationService {
         const image =
             product?.featuredMedia?.preview?.image?.url || null;
         const collections =
-product.collections?.edges?.map(e => ({
-  id: e.node.id,
-  title: e.node.title,
-  handle: e.node.handle
-})) || [];
+            product.collections?.edges?.map(e => ({
+                id: e.node.id,
+                title: e.node.title,
+                handle: e.node.handle
+            })) || [];
         switch (serviceName) {
             case 'title':
                 documents.push({
@@ -315,12 +321,11 @@ product.collections?.edges?.map(e => ({
                     productType: product.productType,
                     tags: product.tags || [],
                     productImage: image,
-                    collections:collections || []
+                    collections: collections || []
                 });
 
                 break;
             case 'tag':
-
                 documents.push({
                     shopId,
                     productId: product.id,
@@ -331,6 +336,19 @@ product.collections?.edges?.map(e => ({
                     productImage: image,
                 });
 
+                break;
+            case "specification":
+                console.log(product)
+                documents.push({
+                    shopId,
+                    productId: product.id,
+                    title: product.title,
+                    productImage: image,
+                    specifications: product.metafields?.edges?.reduce((acc, e) => {
+                        acc[e.node.key] = e.node.value;
+                        return acc;
+                    }, {}) || {}
+                });
                 break;
         }
     }
@@ -397,11 +415,11 @@ product.collections?.edges?.map(e => ({
 
             const image = product.featuredMedia?.preview?.image?.url || null;
             const collections =
-product.collections?.edges?.map(e => ({
-  id: e.node.id,
-  title: e.node.title,
-  handle: e.node.handle
-})) || [];
+                product.collections?.edges?.map(e => ({
+                    id: e.node.id,
+                    title: e.node.title,
+                    handle: e.node.handle
+                })) || [];
             switch (dto.serviceName) {
                 case 'title':
                     documents.push({ shopId, productId, productImage: image, title: product.title });
@@ -582,13 +600,12 @@ product.collections?.edges?.map(e => ({
                         productType: product.productType,
                         tags: product.tags || [],
                         productImage: image,
-                        collections:collections
+                        collections: collections
                     });
 
                     break;
 
                 case 'tag':
-
                     documents.push({
                         shopId,
                         productId,
@@ -597,6 +614,26 @@ product.collections?.edges?.map(e => ({
                         productType: product.productType,
                         tags: product.tags || [],
                         productImage: image,
+                    });
+
+                    break;
+                case "specification":
+
+                    const rawValue = product.metafield?.value || "{}";
+                    let specData = {};
+
+                    try {
+                        specData = JSON.parse(rawValue);
+                    } catch (err) {
+                        console.error("Invalid metafield JSON", err);
+                    }
+
+                    documents.push({
+                        shopId,
+                        productId,
+                        title: product.title,
+                        productImage: image,
+                        specifications: specData
                     });
 
                     break;
@@ -717,6 +754,50 @@ product.collections?.edges?.map(e => ({
         if (!model) throw new Error('Invalid service name');
         return model.find({ shopId }).lean();
     }
+
+
+    async getSpecificationsFromShopify(shopId: string, productId: string) {
+
+        const shop = await this.getShop(shopId);
+
+        const data = await this.shopifyService.shopifyRequest(
+            shop.shopDomain,
+            shop.accessToken,
+            GET_PRODUCT_SPECIFICATIONS_QUERY,
+            { id: productId }
+        );
+
+        const specs = {};
+
+        data.product.metafields.edges.forEach(e => {
+            specs[e.node.key] = e.node.value;
+        });
+
+        return specs;
+    }
+
+    // async saveSpecification(shopId: string, productId: string) {
+
+    //     const specifications = await this.getSpecificationsFromShopify(
+    //         shopId,
+    //         productId
+    //     );
+
+    //     return this.specificationModel.findOneAndUpdate(
+    //         {
+    //             shopId,
+    //             productId,
+    //             serviceName: "specification"
+    //         },
+    //         {
+    //             shopId,
+    //             productId,
+    //             serviceName: "specification",
+    //             value: specifications
+    //         },
+    //         { upsert: true, new: true }
+    //     );
+    // }
 
     // =====================================================
     // ✏️ APPLY TITLE
