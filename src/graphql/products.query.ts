@@ -40,15 +40,23 @@ query Products(
           }
         }
           variants(first: 1) {
-            edges {
-              node {
-                id
-                sku
-                price
-                inventoryQuantity
+          edges {
+            node {
+              id
+              sku
+              price
+              compareAtPrice
+              inventoryQuantity
+
+              inventoryItem {
+                unitCost {
+                  amount
+                  currencyCode
+                }
               }
             }
           }
+        }
 
         priceRangeV2 {
           minVariantPrice { amount currencyCode }

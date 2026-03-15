@@ -637,8 +637,9 @@ export class OptimizationService {
                     });
 
                     break;
-
-
+                
+                case 'metafields':               
+                    break;
             }
         }
 

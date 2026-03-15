@@ -37,8 +37,8 @@ class OptimizationFiltersDto {
   updatedAfter?: string;
 }
 export class StoreOptimizationDto {
-  @IsIn(['title', 'description','metaTitle','metaDescription','handle','imageALT','imageName','pricing','sku','productType','vendor','collection','tag','specification'])
-  serviceName: 'title' | 'description' | 'metaTitle' | 'metaDescription' | 'handle' | 'imageALT' | 'imageName'|'pricing' | 'sku' | 'productType' | 'vendor' | 'collection' | 'tag' | 'specification';
+  @IsIn(['title', 'description','metaTitle','metaDescription','handle','imageALT','imageName','pricing','sku','productType','vendor','collection','tag','specification','metafields'])
+  serviceName: 'title' | 'description' | 'metaTitle' | 'metaDescription' | 'handle' | 'imageALT' | 'imageName'|'pricing' | 'sku' | 'productType' | 'vendor' | 'collection' | 'tag' | 'specification' | 'metafields';
 
   @IsArray()
   @IsOptional()
