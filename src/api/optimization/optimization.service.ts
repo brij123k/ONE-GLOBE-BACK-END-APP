@@ -38,6 +38,11 @@ import { CollectionProduct } from 'src/schema/collection_builder/collection_buil
 import { TagsProduct } from 'src/schema/tags-builder/tag_builder.schema';
 import { Specification } from 'src/schema/metafileds/specification.schema';
 import { GET_PRODUCT_SPECIFICATIONS_QUERY } from 'src/graphql/metafields/get-product-specifications.query';
+import { MetafieldsOptimization } from 'src/schema/metafileds/metafields-optimization.schema';
+import { GET_PRODUCT_OPTIMIZATION_METAFIELDS_QUERY } from 'src/graphql/metafields/get-product-optimization-metafields.query';
+import { GET_PRODUCT_BASE_DATA_QUERY } from 'src/graphql/metafields/get-product-base-data.query';
+import { buildRelatedProductsQuery } from 'src/utils/build-related-products-query';
+import { SEARCH_RELATED_PRODUCTS_QUERY } from 'src/graphql/metafields/search-releted-product-query';
 @Injectable()
 export class OptimizationService {
     constructor(
@@ -92,6 +97,9 @@ export class OptimizationService {
         @InjectModel(Specification.name)
         private specificationModel: Model<Specification>,
 
+        @InjectModel(MetafieldsOptimization.name)
+        private metafieldsModel: Model<MetafieldsOptimization>,
+
         @InjectModel(Shop.name)
         private shopModel: Model<Shop>,
     ) { }
@@ -111,7 +119,8 @@ export class OptimizationService {
             vendor: this.vendorModel,
             collection: this.collectionProductModel,
             tag: this.tagsProductModel,
-            specification: this.specificationModel
+            specification: this.specificationModel,
+            metafields: this.metafieldsModel
         };
 
         return map[serviceName];
@@ -349,6 +358,24 @@ export class OptimizationService {
                         return acc;
                     }, {}) || {}
                 });
+                break;
+            case "metafields":
+                const metafields = this.getProductOptimizationMetafields(
+                    shopId,
+                    product.id
+                );
+                documents.push({
+                    shopId,
+                    productId: product.id,
+                    title: product.title,
+                    productType: product.productType,
+                    vendor: product.vendor,
+                    productImage: image,
+                    optimized: false,
+                    metafields
+                });
+                this.generateRelatedProducts(shopId, product.id)
+
                 break;
         }
     }
@@ -637,8 +664,25 @@ export class OptimizationService {
                     });
 
                     break;
-                
-                case 'metafields':               
+
+                case 'metafields':
+                    const metafields = await this.getProductOptimizationMetafields(
+                        shopId,
+                        product.id
+                    );
+                    console.log(metafields)
+                    documents.push({
+                        shopId,
+                        productId,
+                        title: product.title,
+                        productType: product.productType,
+                        vendor: product.vendor,
+                        productImage: image,
+                        optimized: false,
+                        metafields
+                    });
+                    this.generateRelatedProducts(shopId, productId)
+
                     break;
             }
         }
@@ -777,29 +821,117 @@ export class OptimizationService {
         return specs;
     }
 
-    // async saveSpecification(shopId: string, productId: string) {
+    async getProductOptimizationMetafields(
+        shopId: string,
+        productId: string,
+    ) {
+        console.log(shopId, productId)
 
-    //     const specifications = await this.getSpecificationsFromShopify(
-    //         shopId,
-    //         productId
-    //     );
+        const shop = await this.getShop(shopId);
 
-    //     return this.specificationModel.findOneAndUpdate(
-    //         {
-    //             shopId,
-    //             productId,
-    //             serviceName: "specification"
-    //         },
-    //         {
-    //             shopId,
-    //             productId,
-    //             serviceName: "specification",
-    //             value: specifications
-    //         },
-    //         { upsert: true, new: true }
-    //     );
-    // }
+        const data = await this.shopifyService.shopifyRequest(
+            shop.shopDomain,
+            shop.accessToken,
+            GET_PRODUCT_OPTIMIZATION_METAFIELDS_QUERY,
+            { id: productId }
+        );
+        console.log(data)
 
+        const product = data.product;
+
+        let boostKeywords = [];
+
+        if (product.search_boost_keywords?.value) {
+            try {
+                boostKeywords = JSON.parse(product.search_boost_keywords.value);
+            } catch {
+                boostKeywords = [];
+            }
+        }
+
+        const complementaryProducts =
+            product.complementary_products?.references?.edges?.map(e => ({
+                id: e.node.id,
+                title: e.node.title,
+                image: e.node.featuredMedia?.preview?.image?.url || null
+            })) || [];
+
+        const relatedProducts =
+            product.related_products?.references?.edges?.map(e => ({
+                id: e.node.id,
+                title: e.node.title,
+                image: e.node.featuredMedia?.preview?.image?.url || null
+            })) || [];
+
+        return {
+            search_boost_keywords: {
+                short: boostKeywords,
+                long: [],
+                synonyms: []
+            },
+            complementary_products: complementaryProducts,
+            related_products: relatedProducts
+        };
+    }
+
+    async generateRelatedProducts(shopId: string, productId: string) {
+
+        const shop = await this.getShop(shopId);
+
+        // 1️⃣ Get base product data
+        const baseData = await this.shopifyService.shopifyRequest(
+            shop.shopDomain,
+            shop.accessToken,
+            GET_PRODUCT_BASE_DATA_QUERY,
+            { id: productId }
+        );
+
+        const product = baseData.product;
+        if (!product) throw new Error("Product not found");
+
+        // 2️⃣ Build search query
+        const searchQuery = buildRelatedProductsQuery(product);
+
+        // 3️⃣ Fetch related products
+        const relatedData = await this.shopifyService.shopifyRequest(
+            shop.shopDomain,
+            shop.accessToken,
+            SEARCH_RELATED_PRODUCTS_QUERY,
+            {
+                query: searchQuery,
+                first: 10
+            }
+        );
+
+        const relatedProducts = relatedData.products.edges
+            .map(e => {
+                const p = e.node;
+
+                return {
+                    id: p.id,
+                    title: p.title,
+                    image: p.featuredMedia?.preview?.image?.url || null
+                };
+            })
+            .filter(p => p.id !== productId);
+
+        // 4️⃣ Save to DB
+        const record = await this.metafieldsModel.findOneAndUpdate(
+            { shopId, productId },
+            {
+                $set: {
+                    related_products: relatedProducts
+                }
+            },
+            { new: true, upsert: true }
+        );
+
+        return {
+            productId,
+            related_products: relatedProducts,
+            count: relatedProducts.length
+        };
+    }
     // =====================================================
     // ✏️ APPLY TITLE
     // =====================================================

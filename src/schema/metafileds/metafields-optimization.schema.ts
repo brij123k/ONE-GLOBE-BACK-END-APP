@@ -27,6 +27,22 @@ export class MetafieldsOptimization extends Document {
 
   @Prop({ type: Object, default: null })
   metafields: any;
+
+  @Prop({
+  type: [
+    {
+      id: String,
+      title: String,
+      image: String
+    }
+  ],
+  default: []
+})
+related_products: {
+  id: string;
+  title: string;
+  image: string;
+}[];
 }
 
 export const MetafieldsOptimizationSchema =

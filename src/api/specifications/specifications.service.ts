@@ -15,6 +15,7 @@ import { CreateMetafieldDto } from 'src/dto/metafirlds/create-metafield.dto';
 import { UPDATE_PRODUCT_SPECIFICATION_MUTATION } from 'src/graphql/metafields/update-product-specification';
 import { UpdateSpecificationDto } from 'src/dto/metafirlds/update-specification.dto';
 import { CHECK_SPECIFICATION_DEFINITION_QUERY } from 'src/graphql/metafields/get-product-specification.query';
+
 @Injectable()
 export class SpecificationService {
 
@@ -188,6 +189,51 @@ async getMetafields(shopId: string) {
 
   return data.metafieldDefinitions.edges.map(e => e.node);
 }
+async generateSeoKeywords(shopId: string, dto: any) {
+
+  const shop = await this.getShop(shopId);
+
+  const prompt = `
+You are an ecommerce SEO expert.
+
+Analyze the product using:
+- Title
+- Description
+- Product image
+
+Generate SEO-friendly keywords for Shopify and search engines.
+
+Return ONLY valid JSON.
+
+Format:
+{
+  "primary_keywords": [],
+}
+
+Rules:
+- Primary keywords: 5 most important product keywords
+
+Product Title:
+${dto.title}
+
+`;
+
+  const ai = await this.aiService.generateImageAnalysis(
+    prompt,
+    dto.imageUrl
+  );
+
+  console.log(ai);
+
+  const jsonMatch = ai.match(/\{[\s\S]*\}/);
+
+  if (!jsonMatch) {
+    throw new Error("Invalid AI response");
+  }
+
+  return JSON.parse(jsonMatch[0]);
+}
+
 async checkSpecificationMetafield(shopId: string) {
 
   const shop = await this.getShop(shopId);
@@ -213,6 +259,44 @@ async checkSpecificationMetafield(shopId: string) {
       (e) =>
         e.node.namespace === "custom" &&
         e.node.key === "specification"
+    );
+
+    if (spec) {
+      return [spec.node]; // return the metafield definition
+    }
+
+    hasNextPage = data.metafieldDefinitions.pageInfo.hasNextPage;
+    after = data.metafieldDefinitions.pageInfo.endCursor;
+  }
+
+  return []; // not found
+}
+
+async checkMetafield(shopId: string,metaFieldName:string) {
+
+  const shop = await this.getShop(shopId);
+
+  let after: string | null = null;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+
+    const data = await this.shopifyService.shopifyRequest(
+      shop.shopDomain,
+      shop.accessToken,
+      CHECK_SPECIFICATION_DEFINITION_QUERY,
+      {
+        first: 100,
+        after
+      }
+    );
+
+    const definitions = data.metafieldDefinitions.edges;
+
+    const spec = definitions.find(
+      (e) =>
+        e.node.namespace === "custom" &&
+        e.node.key === metaFieldName
     );
 
     if (spec) {

@@ -32,6 +32,7 @@ import { Vendor, VendorSchema } from 'src/schema/vendor/vendor.schema';
 import { CollectionProduct, CollectionProductSchema } from 'src/schema/collection_builder/collection_builder.schema';
 import { TagsProduct, TagsProductSchema } from 'src/schema/tags-builder/tag_builder.schema';
 import { Specification, SpecificationSchema } from 'src/schema/metafileds/specification.schema';
+import { MetafieldsOptimization, MetafieldsOptimizationSchema } from 'src/schema/metafileds/metafields-optimization.schema';
 @Module({
   imports: [
     AuthModule,
@@ -55,7 +56,8 @@ import { Specification, SpecificationSchema } from 'src/schema/metafileds/specif
       { name: Vendor.name, schema: VendorSchema },
       {name: CollectionProduct.name, schema:CollectionProductSchema},
       {name: TagsProduct.name, schema:TagsProductSchema},
-      {name: Specification.name, schema:SpecificationSchema}
+      {name: Specification.name, schema:SpecificationSchema},
+      {name:MetafieldsOptimization.name, schema:MetafieldsOptimizationSchema}
     ]),
   ],
   controllers: [OptimizationController],

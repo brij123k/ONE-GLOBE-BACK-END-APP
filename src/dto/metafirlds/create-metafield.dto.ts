@@ -14,6 +14,4 @@ export class CreateMetafieldDto {
   @IsString()
   type: string;
 
-  
-
 }

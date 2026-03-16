@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 import { SpecificationService } from './specifications.service';
@@ -51,6 +51,18 @@ checkSpecificationMetafield(@Req() req) {
   const { shopId } = req.user;
 
   return this.specificationService.checkSpecificationMetafield(shopId);
+}
+@Post("check--metafield")
+checkMetafield(@Req() req,@Body() dto:any) {
+
+  const { shopId } = req.user;
+
+  return this.specificationService.checkMetafield(shopId,dto.metaFieldName);
+}
+@Post("metafields/analyze")
+analizeforKeyword(@Req() req,@Body() dto:any){
+  const { shopId } = req.user;
+  return this.specificationService.generateSeoKeywords(shopId,dto)
 }
 
 }
