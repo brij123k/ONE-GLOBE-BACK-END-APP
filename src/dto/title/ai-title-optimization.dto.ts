@@ -4,14 +4,23 @@ export class AITitleOptimizationDto {
   @IsString()
   productId: string;
 
+  @IsOptional()
   @IsString()
-  categoryName: string;
+  categoryName?: string;
 
   @IsNumber()
   minCharacters: number;
 
   @IsNumber()
   maxCharacters: number;
+
+  @IsOptional()
+  @IsBoolean()
+  image?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  title?: boolean;
 
   @IsOptional()
   @IsString()

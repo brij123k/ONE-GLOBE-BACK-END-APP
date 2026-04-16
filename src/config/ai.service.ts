@@ -1,276 +1,212 @@
 import { Injectable } from '@nestjs/common';
-// import { groqClient } from './groq.config';
-import Groq from 'groq-sdk';
+import { GoogleGenAI } from '@google/genai';
+
 @Injectable()
 export class AiService {
-  private groq: Groq;
+  private readonly ai: GoogleGenAI;
 
   constructor() {
-    const key = process.env.GROQ_API_KEY;
+    const key = process.env.GEMINI_API_KEY;
 
     if (!key) {
-      throw new Error('GROQ_API_KEY is missing');
+      throw new Error('GEMINI_API_KEY is missing');
     }
 
-    this.groq = new Groq({ apiKey: key });
+    this.ai = new GoogleGenAI({ apiKey: key });
   }
-  async generateTitle(prompt: string): Promise<string> {
-    const response = await this.groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert Shopify SEO title optimizer.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.7,
-      max_tokens: 200,
+
+  private async generateContent(
+    system: string,
+    prompt: string,
+  ): Promise<string> {
+    const response = await this.ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `${system}\n\n${prompt}`,
+      config: {
+        temperature: 0.6,
+        maxOutputTokens: 800,
+      },
     });
 
-    let title = response.choices[0].message.content ?? '';
+    return response.text || '';
+  }
 
-    // 🧹 Clean output
-    title = title
-      .replace(/["\n]/g, '')
-      .trim();
+  async generateTitle(prompt: string): Promise<string> {
+    const title = await this.generateContent(
+      'You are an expert Shopify SEO title optimizer.',
+      prompt,
+    );
 
-    return title;
+    return title.replace(/["\n]/g, '').trim();
+  }
+
+  async generateTitleFromImage(
+    prompt: string,
+    imageUrl: string,
+  ): Promise<string> {
+    const title = await this.generateImageContent(
+      'You are an expert Shopify SEO title optimizer. Read the product image carefully and create one SEO-friendly Shopify product title.',
+      prompt,
+      imageUrl,
+      0.4,
+      200,
+    );
+
+    return title.replace(/["\n]/g, '').trim();
   }
 
   async generateDescription(prompt: string): Promise<string> {
-    // console.log('Groq Key Loaded:', !!process.env.GROQ_API_KEY);
-    const response = await this.groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert Shopify SEO product description writer.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.6,
-      max_tokens: 800,
-    });
-    // console.log(response)
-
-    let description = response.choices[0].message.content ?? '';
+    const description = await this.generateContent(
+      'You are an expert Shopify SEO product description writer.',
+      prompt,
+    );
 
     return description.trim();
   }
 
-
   async generateMetaTitle(prompt: string): Promise<string> {
-    const response = await this.groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are an expert Shopify SEO meta title optimizer. Generate a concise, high-CTR meta title under 60 characters.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.6,
-      max_tokens: 120,
-    });
+    const title = await this.generateContent(
+      'You are an expert Shopify SEO meta title optimizer. Generate a concise, high-CTR meta title under 60 characters.',
+      prompt,
+    );
 
-    let title = response.choices[0].message.content ?? '';
-
-    // 🧹 Clean output
-    title = title
-      .replace(/["\n]/g, '')
-      .trim();
-
-    return title;
+    return title.replace(/["\n]/g, '').trim();
   }
 
   async generateMetaDescription(prompt: string): Promise<string> {
-    const response = await this.groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are an expert Shopify SEO meta description optimizer. Generate a concise, high-CTR meta Description',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.6,
-      max_tokens: 120,
-    });
+    const description = await this.generateContent(
+      'You are an expert Shopify SEO meta description optimizer. Generate a concise, high-CTR meta Description',
+      prompt,
+    );
 
-    let description = response.choices[0].message.content ?? '';
-
-    // 🧹 Clean output
-    description = description.trim();
-
-    return description;
+    return description.trim();
   }
 
-    async generateMetaHandle(prompt: string): Promise<string> {
-    const response = await this.groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are an expert Shopify SEO meta description optimizer. Generate a concise, high-CTR meta Description',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.6,
-      max_tokens: 120,
-    });
+  async generateMetaHandle(prompt: string): Promise<string> {
+    const handle = await this.generateContent(
+      'Generate SEO-friendly Shopify URL handle (slug). Use hyphens, lowercase, no spaces.',
+      prompt,
+    );
 
-    let description = response.choices[0].message.content ?? '';
-
-    // 🧹 Clean output
-    description = description.trim();
-
-    return description;
+    return handle.trim();
   }
 
-async generateImageAlt(prompt: string): Promise<string> {
-  const response = await this.groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    messages: [
-      {
-        role: 'system',
-        content: 'You generate SEO-friendly ALT text for Shopify images.',
+  async generateImageAlt(prompt: string): Promise<string> {
+    const alt = await this.generateContent(
+      'You generate SEO-friendly ALT text for Shopify images.',
+      prompt,
+    );
+
+    return alt.replace(/["\n]/g, '').trim();
+  }
+
+  async generateImageName(prompt: string): Promise<string> {
+    const name = await this.generateContent(
+      'You generate SEO-friendly Image Name text for Shopify images.',
+      prompt,
+    );
+
+    return name.replace(/["\n]/g, '').trim();
+  }
+
+  async generateProductType(prompt: string): Promise<string> {
+    const type = await this.generateContent(
+      'You are an expert Shopify SEO Product Type optimizer.',
+      prompt,
+    );
+
+    return type.replace(/["\n]/g, '').trim();
+  }
+
+  async generateCategory(prompt: string): Promise<string> {
+    const category = await this.generateContent(
+      'You are an expert Shopify SEO optimizer.',
+      prompt,
+    );
+
+    return category.replace(/["\n]/g, '').trim();
+  }
+
+  async generateImageAnalysis(
+    prompt: string,
+    imageUrl: string,
+  ): Promise<string> {
+    const image = await this.fetchImageForGemini(imageUrl);
+
+    const response = await this.ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: image.mimeType,
+                data: image.data,
+              },
+            },
+          ],
+        },
+      ],
+      config: {
+        temperature: 0.3,
+        maxOutputTokens: 500,
       },
-      {
-        role: 'user',
-        content: prompt,
+    });
+
+    return response.text || '';
+  }
+
+  private async generateImageContent(
+    system: string,
+    prompt: string,
+    imageUrl: string,
+    temperature: number,
+    maxOutputTokens: number,
+  ): Promise<string> {
+    const image = await this.fetchImageForGemini(imageUrl);
+
+    const response = await this.ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: `${system}\n\n${prompt}` },
+            {
+              inlineData: {
+                mimeType: image.mimeType,
+                data: image.data,
+              },
+            },
+          ],
+        },
+      ],
+      config: {
+        temperature,
+        maxOutputTokens,
       },
-    ],
-    temperature: 0.5,
-    max_tokens: 120,
-  });
+    });
 
-  return (
-    response.choices[0].message.content || ''
-  )
-    .replace(/["\n]/g, '')
-    .trim();
-}
-async generateImageName(prompt: string): Promise<string> {
-  const response = await this.groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    messages: [
-      {
-        role: 'system',
-        content: 'You generate SEO-friendly Image Name text for Shopify images.',
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-    temperature: 0.5,
-    max_tokens: 120,
-  });
+    return response.text || '';
+  }
 
-  return (
-    response.choices[0].message.content || ''
-  )
-    .replace(/["\n]/g, '')
-    .trim();
-}
+  private async fetchImageForGemini(
+    url: string,
+  ): Promise<{ data: string; mimeType: string }> {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch product image: ${res.status}`);
+    }
 
-async generateProductType(prompt: string): Promise<string> {
-  const response = await this.groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    messages: [
-      {
-        role: 'system',
-        content: 'You are an expert Shopify SEO Product Type optimizer.',
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-    temperature: 0.5,
-    max_tokens: 120,
-  });
+    const buffer = await res.arrayBuffer();
+    const mimeType =
+      res.headers.get('content-type')?.split(';')[0] || 'image/jpeg';
 
-  return (
-    response.choices[0].message.content || ''
-  )
-    .replace(/["\n]/g, '')
-    .trim();
-}
-
-async generateCategory(prompt: string): Promise<string> {
-  const response = await this.groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    messages: [
-      {
-        role: 'system',
-        content: 'You are an expert Shopify SEO optimizer.',
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-    temperature: 0.5,
-    max_tokens: 120,
-  });
-
-  return (
-    response.choices[0].message.content || ''
-  )
-    .replace(/["\n]/g, '')
-    .trim();
-}
-
-async generateImageAnalysis(prompt: string, imageUrl: string): Promise<string> {
-
-  const response = await this.groq.chat.completions.create({
-    model: "meta-llama/llama-4-scout-17b-16e-instruct",
-    messages: [
-      {
-        role: "system",
-        content: "You are an expert ecommerce product analyzer."
-      },
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: prompt
-          },
-          {
-            type: "image_url",
-            image_url: {
-              url: imageUrl
-            }
-          }
-        ]
-      }
-    ],
-    temperature: 0.3,
-    max_tokens: 500
-  });
-
-  return response.choices[0].message.content || "";
-}
-
+    return {
+      data: Buffer.from(buffer).toString('base64'),
+      mimeType,
+    };
+  }
 }

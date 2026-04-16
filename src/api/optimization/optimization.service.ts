@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Collection, Model } from 'mongoose';
 
@@ -948,12 +948,14 @@ export class OptimizationService {
         const errors = response.productUpdate.userErrors;
         if (errors.length) throw errors;
 
-        return this.classicTitleOptimizedModel.create({
+        const res = await this.classicTitleOptimizedModel.create({
             shopId,
             productId: dto.productId,
             oldTitle: dto.oldTitle,
             newTitle: dto.newTitle,
         });
+        await this.titleModel.findOneAndUpdate({productId:dto.productId},{title:dto.newTitle})
+        return res
     }
 
     // =====================================================
@@ -985,7 +987,7 @@ export class OptimizationService {
     // =====================================================
     async generateAITitle(shopId: string, dto: AITitleOptimizationDto) {
         const shop = await this.getShop(shopId);
-
+        console.log(dto)
         const productResponse = await this.shopifyService.shopifyRequest(
             shop.shopDomain,
             shop.accessToken,
@@ -996,11 +998,30 @@ export class OptimizationService {
         const product = productResponse.product;
         if (!product) throw new Error('Product not found');
 
-        const prompt = buildTitleAIPrompt(product, dto);
+        const imageUrl = product.featuredMedia?.preview?.image?.url || null;
+        const useImage = dto.image ?? true;
+        const useTitle = dto.title ?? true;
 
-        let aiTitle = await this.aiService.generateTitle(prompt);
+        if (!useImage && !useTitle) {
+            throw new BadRequestException('At least one source must be enabled: image or title');
+        }
+
+        if (useImage && !imageUrl && !useTitle) {
+            throw new BadRequestException('Product image not found. Enable title or add a featured image.');
+        }
+
+        const prompt = buildTitleAIPrompt(product, {
+            ...dto,
+            image: useImage && Boolean(imageUrl),
+            title: useTitle,
+        });
+        console.log(prompt)
+        let aiTitle = useImage && imageUrl
+            ? await this.aiService.generateTitleFromImage(prompt, imageUrl)
+            : await this.aiService.generateTitle(prompt);
+
         aiTitle = aiTitle.replace(/["']/g, '').trim();
-
+        console.log(aiTitle)
         if (dto.apply === true) {
             const applied = await this.applyTitleOptimization(shopId, {
                 productId: dto.productId,
@@ -1014,7 +1035,9 @@ export class OptimizationService {
                 oldTitle: product.title,
                 newTitle: aiTitle,
                 characterCount: aiTitle.length,
-                image: product.featuredMedia?.preview?.image?.url || null,
+                image: imageUrl,
+                imageAnalyzed: useImage && Boolean(imageUrl),
+                titleAnalyzed: useTitle,
                 optimizationRecordId: applied._id,
             };
         }
@@ -1024,7 +1047,9 @@ export class OptimizationService {
             oldTitle: product.title,
             newTitle: aiTitle,
             characterCount: aiTitle.length,
-            image: product.featuredMedia?.preview?.image?.url || null,
+            image: imageUrl,
+            imageAnalyzed: useImage && Boolean(imageUrl),
+            titleAnalyzed: useTitle,
         };
     }
 
