@@ -71,6 +71,16 @@ export class AIDescriptionOptimizationDto {
   excludeKeywords?: string[];
 
 
+  /* ---------------- SOURCES ---------------- */
+  @IsOptional()
+  @IsBoolean()
+  image?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  description?: boolean;
+
+
   /* ---------------- APPLY ---------------- */
   @IsOptional()
   @IsBoolean()

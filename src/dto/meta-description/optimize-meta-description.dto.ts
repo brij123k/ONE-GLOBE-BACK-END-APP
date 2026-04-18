@@ -9,5 +9,13 @@ export class OptimizeMetaDescriptionDto {
 
     @IsOptional()
     @IsBoolean()
+    image?: boolean;
+
+    @IsOptional()
+    @IsBoolean()
+    description?: boolean;
+
+    @IsOptional()
+    @IsBoolean()
     apply?: boolean;
 }

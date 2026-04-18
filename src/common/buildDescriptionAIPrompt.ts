@@ -3,6 +3,27 @@ export function buildDescriptionAIPrompt(
   input: any,
 ): string {
 
+  const imageUrl = product.featuredMedia?.preview?.image?.url || 'No image found';
+  const useImage = input.image !== false;
+  const useDescription = input.description !== false;
+  const imageContext = useImage
+    ? `- Product Image URL: ${imageUrl}`
+    : '- Product Image: Do not use image context for this request';
+  const descriptionContext = useDescription
+    ? `- Existing Description: "${product.description || 'Not provided'}"`
+    : `- Existing Description: Do not use old description context for this request`;
+  const sourceInstruction =
+    useImage && useDescription
+      ? `- Use both the product image and existing description.
+- Treat the product image as the primary source of truth.
+- Use the existing description as supporting context.`
+      : useImage
+        ? `- Use the product image as the source of truth.
+- Identify the visible product, style, color, material, pattern, shape, intended use, and obvious product attributes.
+- Do not use the old description as product context.`
+        : `- Use the existing product description as the source of truth.
+- Do not use the product image as product context.`;
+
   const blocksSection = input.blocks
     .map((block: string) => {
       const blockInput = input.blockInputs?.[block];
@@ -27,9 +48,17 @@ using CLEAN, VALID HTML that can be directly saved in Shopify.
 PRODUCT INFORMATION
 ━━━━━━━━━━━━━━━━━━━━━━
 Title: "${product.title}"
-Existing Description: "${product.description}"
+${descriptionContext}
 Vendor: ${product.vendor || 'N/A'}
 Product Type: ${product.productType || 'N/A'}
+${imageContext}
+
+━━━━━━━━━━━━━━━━━━━━━━
+SOURCE INSTRUCTIONS
+━━━━━━━━━━━━━━━━━━━━━━
+${sourceInstruction}
+- If enabled sources conflict, prioritize the image.
+- Do not invent brand names, model numbers, sizes, materials, or claims that are not visible or provided.
 
 ━━━━━━━━━━━━━━━━━━━━━━
 DESCRIPTION STRUCTURE

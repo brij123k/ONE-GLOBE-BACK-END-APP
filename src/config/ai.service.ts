@@ -64,6 +64,21 @@ export class AiService {
     return description.trim();
   }
 
+  async generateDescriptionFromImage(
+    prompt: string,
+    imageUrl: string,
+  ): Promise<string> {
+    const description = await this.generateImageContent(
+      'You are an expert Shopify SEO product description writer. Read the product image carefully and create a detailed, SEO-friendly Shopify product description.',
+      prompt,
+      imageUrl,
+      0.6,
+      2000,
+    );
+
+    return description.trim();
+  }
+
   async generateMetaTitle(prompt: string): Promise<string> {
     const title = await this.generateContent(
       'You are an expert Shopify SEO meta title optimizer. Generate a concise, high-CTR meta title under 60 characters.',
@@ -73,10 +88,40 @@ export class AiService {
     return title.replace(/["\n]/g, '').trim();
   }
 
+  async generateMetaTitleFromImage(
+    prompt: string,
+    imageUrl: string,
+  ): Promise<string> {
+    const title = await this.generateImageContent(
+      'You are an expert Shopify SEO meta title optimizer. Read the product image carefully and create a concise, SEO-friendly Shopify meta title.',
+      prompt,
+      imageUrl,
+      0.6,
+      200,
+    );
+
+    return title.replace(/["\n]/g, '').trim();
+  }
+
   async generateMetaDescription(prompt: string): Promise<string> {
     const description = await this.generateContent(
       'You are an expert Shopify SEO meta description optimizer. Generate a concise, high-CTR meta Description',
       prompt,
+    );
+
+    return description.trim();
+  }
+
+  async generateMetaDescriptionFromImage(
+    prompt: string,
+    imageUrl: string,
+  ): Promise<string> {
+    const description = await this.generateImageContent(
+      'You are an expert Shopify SEO meta description optimizer. Read the product image carefully and create a concise, SEO-friendly Shopify meta description.',
+      prompt,
+      imageUrl,
+      0.6,
+      300,
     );
 
     return description.trim();

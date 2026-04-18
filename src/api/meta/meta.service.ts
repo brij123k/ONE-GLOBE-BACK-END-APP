@@ -67,6 +67,18 @@ export class MetaService {
   const product = productResponse.product;
   if (!product) throw new Error('Product not found');
 
+  const imageUrl = product.featuredMedia?.preview?.image?.url || null;
+  const useImage = dto.image ?? true;
+  const useTitle = dto.title ?? true;
+
+  if (!useImage && !useTitle) {
+    throw new Error('At least one source must be enabled: image or title');
+  }
+
+  if (useImage && !imageUrl && !useTitle) {
+    throw new Error('Product image not found. Enable title or add a featured image.');
+  }
+
   const oldMetaTitle =
     product.seo?.title || product.title;
 
@@ -74,10 +86,12 @@ export class MetaService {
   const prompt = buildMetaTitleAIPrompt(product, dto);
 
   // 3️⃣ Call Groq AI
-  let aiMetaTitle = await this.aiService.generateMetaTitle(prompt);
+  let aiMetaTitle = useImage && imageUrl
+    ? await this.aiService.generateMetaTitleFromImage(prompt, imageUrl)
+    : await this.aiService.generateMetaTitle(prompt);
 
   // 4️⃣ Clean AI response
-  aiMetaTitle = aiMetaTitle.replace(/["']/g, '').trim();
+  aiMetaTitle = aiMetaTitle.replace(/['"]/g, '').trim();
 
   // 6️⃣ Apply immediately if requested
   if (dto.apply === true) {
@@ -96,6 +110,9 @@ export class MetaService {
       oldMetaTitle,
       newMetaTitle: aiMetaTitle,
       characterCount: aiMetaTitle.length,
+      image: imageUrl,
+      imageAnalyzed: useImage && Boolean(imageUrl),
+      titleAnalyzed: useTitle,
       optimizationRecordId: applied._id,
     };
   }
@@ -106,6 +123,9 @@ export class MetaService {
     oldMetaTitle,
     newMetaTitle: aiMetaTitle,
     characterCount: aiMetaTitle.length,
+    image: imageUrl,
+    imageAnalyzed: useImage && Boolean(imageUrl),
+    titleAnalyzed: useTitle,
   };
 }
 
@@ -128,6 +148,18 @@ export class MetaService {
   const product = productResponse.product;
   if (!product) throw new Error('Product not found');
 
+  const imageUrl = product.featuredMedia?.preview?.image?.url || null;
+  const useImage = dto.image ?? true;
+  const useDescription = dto.description ?? true;
+
+  if (!useImage && !useDescription) {
+    throw new Error('At least one source must be enabled: image or description');
+  }
+
+  if (useImage && !imageUrl && !useDescription) {
+    throw new Error('Product image not found. Enable description or add a featured image.');
+  }
+
   const oldMetaDescription =
     product.seo?.description || product.description;
 
@@ -135,14 +167,17 @@ export class MetaService {
   const prompt = buildMetaDescriptionAIPrompt(product, dto);
 
   // 3️⃣ Call Groq AI
-  let aiMetaDescription = await this.aiService.generateMetaDescription(prompt);
+  let aiMetaDescription = useImage && imageUrl
+    ? await this.aiService.generateMetaDescriptionFromImage(prompt, imageUrl)
+    : await this.aiService.generateMetaDescription(prompt);
+
   // 4️⃣ Clean AI response
   aiMetaDescription = aiMetaDescription.trim();
 
-  // 5️⃣ Optional length enforcement (SEO best practice: ≤ 60 chars)
-  // if (aiMetaDescription.length > 60) {
-  //   aiMetaTitle = aiMetaTitle.slice(0, 60).trim();
-  // }
+  // 5️⃣ Optional length enforcement (SEO best practice: ≤ 160 chars)
+  if (aiMetaDescription.length > 160) {
+    aiMetaDescription = aiMetaDescription.slice(0, 160).trim();
+  }
 
   // 6️⃣ Apply immediately if requested
   if (dto.apply === true) {
@@ -161,6 +196,9 @@ export class MetaService {
       oldMetaDescription,
       newMetaDescription: aiMetaDescription,
       characterCount: aiMetaDescription.length,
+      image: imageUrl,
+      imageAnalyzed: useImage && Boolean(imageUrl),
+      descriptionAnalyzed: useDescription,
       optimizationRecordId: applied._id,
     };
   }
@@ -171,6 +209,9 @@ export class MetaService {
     oldMetaDescription,
     newMetaDescription: aiMetaDescription,
     characterCount: aiMetaDescription.length,
+    image: imageUrl,
+    imageAnalyzed: useImage && Boolean(imageUrl),
+    descriptionAnalyzed: useDescription,
   };
 }
 

@@ -49,10 +49,14 @@ export class OptimizeMetaTitleDto {
       @IsString()
       tone?: string;
 
-    @IsString()
-    productTitle: string;
+  @IsOptional()
+  @IsBoolean()
+  image?: boolean;
 
-    @IsOptional()
+  @IsOptional()
+  @IsBoolean()
+  title?: boolean;
+
     @IsBoolean()
     apply?: boolean;
 }

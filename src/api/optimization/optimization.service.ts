@@ -974,12 +974,14 @@ export class OptimizationService {
         const errors = response.productUpdate.userErrors;
         if (errors.length) throw errors;
 
-        return this.classicDescriptionOptimizedModel.create({
+        const res = await this.classicDescriptionOptimizedModel.create({
             shopId,
             productId: dto.productId,
             oldDescription: dto.oldDescription,
             newDescription: dto.newDescription,
         });
+        await this.descriptionModel.findOneAndUpdate({productId:dto.productId},{description:dto.newDescription, descriptionHtml:dto.newDescription})
+        return res
     }
 
     // =====================================================
@@ -987,7 +989,6 @@ export class OptimizationService {
     // =====================================================
     async generateAITitle(shopId: string, dto: AITitleOptimizationDto) {
         const shop = await this.getShop(shopId);
-        console.log(dto)
         const productResponse = await this.shopifyService.shopifyRequest(
             shop.shopDomain,
             shop.accessToken,
@@ -1015,11 +1016,10 @@ export class OptimizationService {
             image: useImage && Boolean(imageUrl),
             title: useTitle,
         });
-        console.log(prompt)
         let aiTitle = useImage && imageUrl
             ? await this.aiService.generateTitleFromImage(prompt, imageUrl)
             : await this.aiService.generateTitle(prompt);
-
+        console.log(aiTitle)
         aiTitle = aiTitle.replace(/["']/g, '').trim();
         console.log(aiTitle)
         if (dto.apply === true) {
@@ -1069,15 +1069,32 @@ export class OptimizationService {
         const product = productResponse.product;
         if (!product) throw new Error('Product not found');
 
-        const prompt = buildDescriptionAIPrompt(product, dto);
+        const imageUrl = product.featuredMedia?.preview?.image?.url || null;
+        const useImage = dto.image ?? true;
+        const useDescription = dto.description ?? true;
 
-        let aiDescription = await this.aiService.generateDescription(prompt);
+        if (!useImage && !useDescription) {
+            throw new BadRequestException('At least one source must be enabled: image or description');
+        }
+
+        if (useImage && !imageUrl && !useDescription) {
+            throw new BadRequestException('Product image not found. Enable description or add a featured image.');
+        }
+
+        const prompt = buildDescriptionAIPrompt(product, {
+            ...dto,
+            image: useImage && Boolean(imageUrl),
+            description: useDescription,
+        });
+        let aiDescription = useImage && imageUrl
+            ? await this.aiService.generateDescriptionFromImage(prompt, imageUrl)
+            : await this.aiService.generateDescription(prompt);
         aiDescription = aiDescription.trim();
 
         if (dto.apply === true) {
             const applied = await this.applyDescriptionOptimization(shopId, {
                 productId: dto.productId,
-                oldDescription: product.description,
+                oldDescription: product.descriptionHtml,
                 newDescription: aiDescription,
             });
 
@@ -1087,7 +1104,9 @@ export class OptimizationService {
                 oldDescription: product.descriptionHtml,
                 newDescription: aiDescription,
                 characterCount: aiDescription.length,
-                image: product.featuredMedia?.preview?.image?.url || null,
+                image: imageUrl,
+                imageAnalyzed: useImage && Boolean(imageUrl),
+                descriptionAnalyzed: useDescription,
                 optimizationRecordId: applied._id,
             };
         }
@@ -1097,7 +1116,9 @@ export class OptimizationService {
             oldDescription: product.descriptionHtml,
             newDescription: aiDescription,
             characterCount: aiDescription.length,
-            image: product.featuredMedia?.preview?.image?.url || null,
+            image: imageUrl,
+            imageAnalyzed: useImage && Boolean(imageUrl),
+            descriptionAnalyzed: useDescription,
         };
     }
 }
