@@ -126,6 +126,19 @@ Rules:
 - Make the handle and imageName lowercase with hyphens only.
 - Keep imageAlt natural, descriptive, and under 125 characters.
 - Respect source toggles: image=${dto.image ?? true}, title=${dto.title ?? true}, description=${dto.description ?? true}.
+
+Description BLOCK RULES:
+- Do not use heading tags: no <h1>, <h2>, <h3>, <h4>, <h5>, or <h6>
+- If a block needs a heading/title, write it as <p><strong>Heading text</strong></p>
+- Use <p> for text, <ul><li> for features/specs
+- Do not skip/add blocks
+
+Strict title Instructions:
+- Never include the pipe character: |
+- No quotes
+- No explanations
+- No emojis
+- No markdown
 `;
   }
 
