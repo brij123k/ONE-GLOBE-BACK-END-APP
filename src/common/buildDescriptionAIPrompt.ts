@@ -48,7 +48,8 @@ Use blocks in order:
 ${blocksSection}
 
 BLOCK RULES:
-- Each starts with <h2>
+- Do not use heading tags: no <h1>, <h2>, <h3>, <h4>, <h5>, or <h6>
+- If a block needs a heading/title, write it as <p><strong>Heading text</strong></p>
 - Use <p> for text, <ul><li> for features/specs
 - Do not skip/add blocks
 
@@ -61,6 +62,7 @@ Brand: ${input.brandContext || 'None'}
 
 OUTPUT:
 Only clean HTML (Shopify-safe)
+Never output heading tags; use bold text inside <p> instead
 No markdown, no extra text
 `;
 }
