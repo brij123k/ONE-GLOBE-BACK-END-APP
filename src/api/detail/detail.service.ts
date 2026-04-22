@@ -92,9 +92,44 @@ export class DetailService {
     image: any,
     dto: OptimizeDetailDto,
   ): string {
+    const useImage = dto.image ?? true;
+    const useTitle = dto.title ?? true;
+    const useDescription = dto.description ?? true;
+
+    const sourceLines = [
+      useTitle ? `- Current title: ${product.title || ''}` : null,
+      useDescription
+        ? `- Current description: ${
+            product.description || product.descriptionHtml || ''
+          }`
+        : null,
+      `- Current meta title: ${product.seo?.title || ''}`,
+      `- Current meta description: ${product.seo?.description || ''}`,
+      `- Current handle: ${product.handle || ''}`,
+      `- Vendor: ${product.vendor || ''}`,
+      `- Product type: ${product.productType || ''}`,
+      `- Tags: ${(product.tags || []).join(', ')}`,
+      useImage ? `- Selected image alt: ${image?.alt || ''}` : null,
+      useImage ? `- Selected image URL: ${image?.image?.url || ''}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const sourceInstructions = [
+      useImage
+        ? '- Use the product image as the primary visual source.'
+        : '- Do not use image context.',
+      useTitle
+        ? '- Use the current title as supporting context.'
+        : '- Do not use the current title as source context.',
+      useDescription
+        ? '- Use the current description as supporting context.'
+        : '- Do not use the current description as source context.',
+    ].join('\n');
+
     return `
 Create one optimized Shopify detail response for this product.
-Use the product image as the main source when available, then use the product data for context.
+Use only the source context included below.
 
 Return JSON only with this exact shape:
 {
@@ -108,24 +143,17 @@ Return JSON only with this exact shape:
 }
 
 Product data:
-- Current title: ${product.title || ''}
-- Current description: ${product.description || product.descriptionHtml || ''}
-- Current meta title: ${product.seo?.title || ''}
-- Current meta description: ${product.seo?.description || ''}
-- Current handle: ${product.handle || ''}
-- Vendor: ${product.vendor || ''}
-- Product type: ${product.productType || ''}
-- Tags: ${(product.tags || []).join(', ')}
-- Selected image alt: ${image?.alt || ''}
-- Selected image URL: ${image?.image?.url || ''}
+${sourceLines}
+
+Source rules:
+${sourceInstructions}
 
 Rules:
-- Do not invent brand names, material, color, size, or features that are not visible in the image or present in product data.
+- Do not invent brand names, material, color, size, or features that are not present in the included source context.
 - Make the title readable for shoppers and useful for SEO.
 - Make the description valid Shopify HTML with short paragraphs or bullet list tags.
 - Make the handle and imageName lowercase with hyphens only.
 - Keep imageAlt natural, descriptive, and under 125 characters.
-- Respect source toggles: image=${dto.image ?? true}, title=${dto.title ?? true}, description=${dto.description ?? true}.
 
 Description BLOCK RULES:
 - Do not use heading tags: no <h1>, <h2>, <h3>, <h4>, <h5>, or <h6>
