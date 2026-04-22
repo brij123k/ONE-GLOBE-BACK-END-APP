@@ -65,6 +65,10 @@ export class DetailService {
   }
 
   private parseJsonResponse(raw: string) {
+    if (!raw?.trim()) {
+      throw new BadRequestException('AI returned an empty detail response');
+    }
+
     const cleaned = raw
       .replace(/```json/gi, '')
       .replace(/```/g, '')
@@ -76,10 +80,18 @@ export class DetailService {
       throw new BadRequestException('AI did not return valid detail JSON');
     }
 
-    return JSON.parse(cleaned.slice(start, end + 1));
+    try {
+      return JSON.parse(cleaned.slice(start, end + 1));
+    } catch {
+      throw new BadRequestException('AI returned malformed detail JSON');
+    }
   }
 
-  private buildPrompt(product: any, image: any, dto: OptimizeDetailDto): string {
+  private buildPrompt(
+    product: any,
+    image: any,
+    dto: OptimizeDetailDto,
+  ): string {
     return `
 Create one optimized Shopify detail response for this product.
 Use the product image as the main source when available, then use the product data for context.
@@ -132,18 +144,24 @@ Rules:
 
     const product = productResponse.product;
     if (!product) throw new Error('Product not found');
-
     const images =
       product.media?.edges
         ?.filter((edge: any) => edge.node.mediaContentType === 'IMAGE')
         ?.map((edge: any) => edge.node) || [];
-    const selectedImage =
+    let selectedImage =
       images.find((image: any) => image.id === dto.imageId) || images[0];
-    const imageUrl = selectedImage?.image?.url || null;
+    let imageUrl = selectedImage?.image?.url || null;
     const useImage = dto.image ?? true;
 
     if (useImage && !imageUrl) {
-      throw new BadRequestException('Product image not found');
+      imageUrl = product.featuredMedia?.preview?.image?.url || null;
+      selectedImage = imageUrl
+        ? {
+            id: product.featuredMedia?.id || dto.imageId || null,
+            alt: '',
+            image: { url: imageUrl },
+          }
+        : null;
     }
 
     const prompt = this.buildPrompt(product, selectedImage, dto);
@@ -154,16 +172,26 @@ Rules:
     const generated = this.parseJsonResponse(raw);
 
     const optimized = {
-      title: String(generated.title || product.title || '').replace(/["']/g, '').trim(),
-      description: String(generated.description || product.descriptionHtml || '').trim(),
-      metaTitle: String(generated.metaTitle || product.seo?.title || product.title || '')
+      title: String(generated.title || product.title || '')
+        .replace(/["']/g, '')
+        .trim(),
+      description: String(
+        generated.description || product.descriptionHtml || '',
+      ).trim(),
+      metaTitle: String(
+        generated.metaTitle || product.seo?.title || product.title || '',
+      )
         .replace(/["']/g, '')
         .trim()
         .slice(0, 60),
-      metaDescription: String(generated.metaDescription || product.seo?.description || '')
+      metaDescription: String(
+        generated.metaDescription || product.seo?.description || '',
+      )
         .trim()
         .slice(0, 160),
-      handle: this.cleanHandle(String(generated.handle || product.handle || '')),
+      handle: this.cleanHandle(
+        String(generated.handle || product.handle || ''),
+      ),
       imageAlt: String(generated.imageAlt || selectedImage?.alt || '')
         .replace(/["']/g, '')
         .trim()
@@ -186,7 +214,7 @@ Rules:
         imageName: this.getImageName(imageUrl),
       },
       newValues: optimized,
-      images: selectedImage
+      images: selectedImage?.id
         ? [
             {
               imageId: selectedImage.id,

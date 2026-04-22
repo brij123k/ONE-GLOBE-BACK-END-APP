@@ -16,6 +16,7 @@ query getProduct($id: ID!) {
     }
 
     featuredMedia {
+      id
       ... on MediaImage {
         preview {
           image {

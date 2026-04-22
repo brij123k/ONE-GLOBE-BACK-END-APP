@@ -4,6 +4,27 @@ import { GoogleGenAI } from '@google/genai';
 @Injectable()
 export class AiService {
   private readonly ai: GoogleGenAI;
+  private readonly detailOptimizationSchema = {
+    type: 'object',
+    properties: {
+      title: { type: 'string' },
+      description: { type: 'string' },
+      metaTitle: { type: 'string' },
+      metaDescription: { type: 'string' },
+      handle: { type: 'string' },
+      imageAlt: { type: 'string' },
+      imageName: { type: 'string' },
+    },
+    required: [
+      'title',
+      'description',
+      'metaTitle',
+      'metaDescription',
+      'handle',
+      'imageAlt',
+      'imageName',
+    ],
+  };
 
   constructor() {
     const key = process.env.GEMINI_API_KEY;
@@ -16,30 +37,30 @@ export class AiService {
   }
 
   private async retryRequest<T>(
-  fn: () => Promise<T>,
-  retries = 3,
-  delay = 1500,
-): Promise<T> {
-  try {
-    return await fn();
-  } catch (error: any) {
-    if (retries === 0) throw error;
+    fn: () => Promise<T>,
+    retries = 3,
+    delay = 1500,
+  ): Promise<T> {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (retries === 0) throw error;
 
-    if (error?.status === 503) {
-      console.log(`⚠️ Gemini busy... retrying (${retries})`);
-      await new Promise((res) => setTimeout(res, delay));
-      return this.retryRequest(fn, retries - 1, delay * 2); // exponential backoff
+      if (error?.status === 503) {
+        console.log(`⚠️ Gemini busy... retrying (${retries})`);
+        await new Promise((res) => setTimeout(res, delay));
+        return this.retryRequest(fn, retries - 1, delay * 2); // exponential backoff
+      }
+
+      throw error;
     }
-
-    throw error;
   }
-}
 
   private async generateContent(
     system: string,
     prompt: string,
   ): Promise<string> {
-   const response = await this.retryRequest(() =>
+    const response = await this.retryRequest(() =>
       this.ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `${system}\n\n${prompt}`,
@@ -181,19 +202,53 @@ export class AiService {
     imageUrl?: string | null,
   ): Promise<string> {
     if (imageUrl) {
-      return this.generateImageContent(
-        'You are an expert Shopify SEO optimizer. Analyze the product image first, then optimize all requested Shopify product detail fields. Return valid JSON only.',
-        prompt,
-        imageUrl,
-        0.5,
-        1600,
+      const image = await this.fetchImageForGemini(imageUrl);
+
+      const response = await this.retryRequest(() =>
+        this.ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: `You are an expert Shopify SEO optimizer. Analyze the product image first, then optimize all requested Shopify product detail fields. Return valid JSON only.\n\n${prompt}`,
+                },
+                {
+                  inlineData: {
+                    mimeType: image.mimeType,
+                    data: image.data,
+                  },
+                },
+              ],
+            },
+          ],
+          config: {
+            temperature: 0.4,
+            maxOutputTokens: 2400,
+            responseMimeType: 'application/json',
+            responseJsonSchema: this.detailOptimizationSchema,
+          },
+        }),
       );
+
+      return response.text || '';
     }
 
-    return this.generateContent(
-      'You are an expert Shopify SEO optimizer. Optimize all requested Shopify product detail fields. Return valid JSON only.',
-      prompt,
+    const response = await this.retryRequest(() =>
+      this.ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `You are an expert Shopify SEO optimizer. Optimize all requested Shopify product detail fields. Return valid JSON only.\n\n${prompt}`,
+        config: {
+          temperature: 0.4,
+          maxOutputTokens: 2400,
+          responseMimeType: 'application/json',
+          responseJsonSchema: this.detailOptimizationSchema,
+        },
+      }),
     );
+
+    return response.text || '';
   }
 
   async generateProductType(prompt: string): Promise<string> {
@@ -255,28 +310,28 @@ export class AiService {
     const image = await this.fetchImageForGemini(imageUrl);
 
     const response = await this.retryRequest(() =>
-  this.ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          { text: `${system}\n\n${prompt}` },
+      this.ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [
           {
-            inlineData: {
-              mimeType: image.mimeType,
-              data: image.data,
-            },
+            role: 'user',
+            parts: [
+              { text: `${system}\n\n${prompt}` },
+              {
+                inlineData: {
+                  mimeType: image.mimeType,
+                  data: image.data,
+                },
+              },
+            ],
           },
         ],
-      },
-    ],
-    config: {
-      temperature,
-      maxOutputTokens,
-    },
-  }),
-);
+        config: {
+          temperature,
+          maxOutputTokens,
+        },
+      }),
+    );
 
     return response.text || '';
   }
