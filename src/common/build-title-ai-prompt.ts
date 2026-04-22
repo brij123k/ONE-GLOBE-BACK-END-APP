@@ -54,9 +54,11 @@ Rules:
 - Must include keywords: ${input.mustIncludeKeywords || 'None'}
 - Exclude keywords: ${input.excludeKeywords || 'None'}
 - Tone: ${input.tone || 'Professional'}
+- Do not use the pipe character: |
 
 Strict Instructions:
 - Return ONLY the title
+- Never include the pipe character: |
 - No quotes
 - No explanations
 - No emojis
