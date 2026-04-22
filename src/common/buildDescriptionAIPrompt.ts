@@ -1,110 +1,66 @@
-export function buildDescriptionAIPrompt(
-  product: any,
-  input: any,
-): string {
-
-  const imageUrl = product.featuredMedia?.preview?.image?.url || 'No image found';
+export function buildDescriptionAIPrompt(product: any, input: any): string {
+  const imageUrl = product.featuredMedia?.preview?.image?.url || 'No image';
   const useImage = input.image !== false;
   const useDescription = input.description !== false;
+
   const imageContext = useImage
-    ? `- Product Image URL: ${imageUrl}`
-    : '- Product Image: Do not use image context for this request';
+    ? `Image: ${imageUrl}`
+    : `Image: ignore`;
+
   const descriptionContext = useDescription
-    ? `- Existing Description: "${product.description || 'Not provided'}"`
-    : `- Existing Description: Do not use old description context for this request`;
+    ? `Old Desc: "${product.description || 'None'}"`
+    : `Old Desc: ignore`;
+
   const sourceInstruction =
     useImage && useDescription
-      ? `- Use both the product image and existing description.
-- Treat the product image as the primary source of truth.
-- Use the existing description as supporting context.`
+      ? `Use both. Image > text.`
       : useImage
-        ? `- Use the product image as the source of truth.
-- Identify the visible product, style, color, material, pattern, shape, intended use, and obvious product attributes.
-- Do not use the old description as product context.`
-        : `- Use the existing product description as the source of truth.
-- Do not use the product image as product context.`;
+        ? `Use image only.`
+        : `Use text only.`;
 
   const blocksSection = input.blocks
     .map((block: string) => {
       const blockInput = input.blockInputs?.[block];
-
-      if (!blockInput) {
-        return `BLOCK: ${block}`;
-      }
-
-      return `BLOCK: ${block}
-BLOCK INSTRUCTIONS:
-${blockInput}`;
+      return blockInput
+        ? `BLOCK: ${block}\n${blockInput}`
+        : `BLOCK: ${block}`;
     })
-    .join('\n\n');
+    .join('\n');
 
   return `
-You are an expert Shopify product description copywriter.
+You are a Shopify product copywriter. Write SEO-ready HTML description.
 
-Your task is to generate a HIGH-QUALITY, SEO-OPTIMIZED PRODUCT DESCRIPTION
-using CLEAN, VALID HTML that can be directly saved in Shopify.
-
-━━━━━━━━━━━━━━━━━━━━━━
-PRODUCT INFORMATION
-━━━━━━━━━━━━━━━━━━━━━━
-Title: "${product.title}"
-${descriptionContext}
+PRODUCT:
+Title: ${product.title}
 Vendor: ${product.vendor || 'N/A'}
-Product Type: ${product.productType || 'N/A'}
+Type: ${product.productType || 'N/A'}
+${descriptionContext}
 ${imageContext}
 
-━━━━━━━━━━━━━━━━━━━━━━
-SOURCE INSTRUCTIONS
-━━━━━━━━━━━━━━━━━━━━━━
+SOURCE:
 ${sourceInstruction}
-- If enabled sources conflict, prioritize the image.
-- Do not invent brand names, model numbers, sizes, materials, or claims that are not visible or provided.
+No guessing missing facts.
 
-━━━━━━━━━━━━━━━━━━━━━━
-DESCRIPTION STRUCTURE
-━━━━━━━━━━━━━━━━━━━━━━
-Description format: ${input.formatName}
-
-Generate the description using the following blocks
-IN THIS EXACT ORDER.
+FORMAT:
+${input.formatName}
+Use blocks in order:
 
 ${blocksSection}
 
-RULES FOR EACH BLOCK:
-- Each block MUST start with an <h2> heading
-- The heading should be a natural human-readable version of the block name
-- Content must be inside <p>, <ul>, <li> where appropriate
-- Use bullet lists (<ul><li>) for features or specifications
-- Follow block instructions when provided
-- Do NOT skip any block
-- Do NOT add extra blocks
+BLOCK RULES:
+- Each starts with <h2>
+- Use <p> for text, <ul><li> for features/specs
+- Do not skip/add blocks
 
-━━━━━━━━━━━━━━━━━━━━━━
-SEO & CONTENT RULES
-━━━━━━━━━━━━━━━━━━━━━━
-Target length: approximately ${input.targetLength} words (±10%)
-
+SEO:
+Length: ~${input.targetLength} words
 Tone: ${input.tone || 'Professional'}
+Include: ${input.includeKeywords?.join(', ') || 'None'}
+Exclude: ${input.excludeKeywords?.join(', ') || 'None'}
+Brand: ${input.brandContext || 'None'}
 
-Include these keywords naturally:
-${input.includeKeywords?.length ? input.includeKeywords.join(', ') : 'None'}
-
-Do NOT use these keywords:
-${input.excludeKeywords?.length ? input.excludeKeywords.join(', ') : 'None'}
-
-Brand Context:
-${input.brandContext || 'None'}
-
-━━━━━━━━━━━━━━━━━━━━━━
-STRICT OUTPUT INSTRUCTIONS
-━━━━━━━━━━━━━━━━━━━━━━
-- Output ONLY valid HTML
-- No markdown
-- No explanations
-- No emojis
-- No quotes
-- No <html>, <head>, or <body> tags
-- Use semantic Shopify-safe HTML only
-- Output must be ready to save directly as a Shopify product description
+OUTPUT:
+Only clean HTML (Shopify-safe)
+No markdown, no extra text
 `;
 }

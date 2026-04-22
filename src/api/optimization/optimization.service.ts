@@ -43,6 +43,7 @@ import { GET_PRODUCT_OPTIMIZATION_METAFIELDS_QUERY } from 'src/graphql/metafield
 import { GET_PRODUCT_BASE_DATA_QUERY } from 'src/graphql/metafields/get-product-base-data.query';
 import { buildRelatedProductsQuery } from 'src/utils/build-related-products-query';
 import { SEARCH_RELATED_PRODUCTS_QUERY } from 'src/graphql/metafields/search-releted-product-query';
+import { DetailOptimization } from 'src/schema/detail/detail-optimization.schema';
 @Injectable()
 export class OptimizationService {
     constructor(
@@ -100,6 +101,9 @@ export class OptimizationService {
         @InjectModel(MetafieldsOptimization.name)
         private metafieldsModel: Model<MetafieldsOptimization>,
 
+        @InjectModel(DetailOptimization.name)
+        private detailModel: Model<DetailOptimization>,
+
         @InjectModel(Shop.name)
         private shopModel: Model<Shop>,
     ) { }
@@ -115,6 +119,7 @@ export class OptimizationService {
             sku: this.skuModel,
             imageALT: this.imageAltModel,
             imageName: this.imageNameModel,
+            detail: this.detailModel,
             productType: this.productType,
             vendor: this.vendorModel,
             collection: this.collectionProductModel,
@@ -130,6 +135,42 @@ export class OptimizationService {
         const shop = await this.shopModel.findById(shopId).lean();
         if (!shop) throw new Error('Invalid shop');
         return shop;
+    }
+
+    private buildDetailDocument(shopId: string, product: any) {
+        const productImage =
+            product?.featuredMedia?.preview?.image?.url || null;
+        const images =
+            product.media?.edges
+                ?.filter((img) => img.node.mediaContentType === 'IMAGE')
+                ?.map((img) => {
+                    const imageNode = img.node;
+                    const imageUrl = imageNode.image?.url || null;
+                    const imageName = imageUrl
+                        ? imageUrl.split('/').pop()?.split('?')[0]
+                        : null;
+
+                    return {
+                        imageId: imageNode.id,
+                        imageUrl,
+                        imageName,
+                        altText: imageNode.alt || '',
+                    };
+                }) || [];
+
+        return {
+            shopId,
+            productId: product.id,
+            productImage,
+            title: product.title,
+            description: product.description || '',
+            descriptionHtml: product.descriptionHtml || '',
+            metaTitle: product.seo?.title || product.title || '',
+            metaDescription: product.seo?.description || '',
+            handle: product.handle || '',
+            images,
+            optimized: false,
+        };
     }
 
     private pushDocumentByService(
@@ -301,6 +342,10 @@ export class OptimizationService {
 
                 break;
 
+            case 'detail':
+                documents.push(this.buildDetailDocument(shopId, product));
+                break;
+
             case 'productType':
                 documents.push({
                     shopId,
@@ -457,6 +502,7 @@ export class OptimizationService {
                         shopId,
                         productId,
                         productImage: image,
+                        title:product.title,
                         description: product.descriptionHtml || '',
                         descriptionHtml: product.descriptionHtml || '',
                     });
@@ -596,6 +642,10 @@ export class OptimizationService {
 
                     documents.push(...imageNames);
 
+                    break;
+
+                case 'detail':
+                    documents.push(this.buildDetailDocument(shopId, product));
                     break;
 
                 case 'productType':
@@ -796,6 +846,7 @@ export class OptimizationService {
 
     async getOptimizedProducts(shopId: string, serviceName: string) {
         const model = this.getModel(serviceName);
+        console.log(model)
         if (!model) throw new Error('Invalid service name');
         return model.find({ shopId }).lean();
     }

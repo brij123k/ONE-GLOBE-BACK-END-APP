@@ -33,6 +33,7 @@ import { CollectionProduct, CollectionProductSchema } from 'src/schema/collectio
 import { TagsProduct, TagsProductSchema } from 'src/schema/tags-builder/tag_builder.schema';
 import { Specification, SpecificationSchema } from 'src/schema/metafileds/specification.schema';
 import { MetafieldsOptimization, MetafieldsOptimizationSchema } from 'src/schema/metafileds/metafields-optimization.schema';
+import { DetailOptimization, DetailOptimizationSchema } from 'src/schema/detail/detail-optimization.schema';
 @Module({
   imports: [
     AuthModule,
@@ -57,7 +58,8 @@ import { MetafieldsOptimization, MetafieldsOptimizationSchema } from 'src/schema
       {name: CollectionProduct.name, schema:CollectionProductSchema},
       {name: TagsProduct.name, schema:TagsProductSchema},
       {name: Specification.name, schema:SpecificationSchema},
-      {name:MetafieldsOptimization.name, schema:MetafieldsOptimizationSchema}
+      {name:MetafieldsOptimization.name, schema:MetafieldsOptimizationSchema},
+      {name: DetailOptimization.name, schema: DetailOptimizationSchema}
     ]),
   ],
   controllers: [OptimizationController],

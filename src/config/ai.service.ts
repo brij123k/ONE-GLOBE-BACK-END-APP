@@ -15,18 +15,40 @@ export class AiService {
     this.ai = new GoogleGenAI({ apiKey: key });
   }
 
+  private async retryRequest<T>(
+  fn: () => Promise<T>,
+  retries = 3,
+  delay = 1500,
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (error: any) {
+    if (retries === 0) throw error;
+
+    if (error?.status === 503) {
+      console.log(`⚠️ Gemini busy... retrying (${retries})`);
+      await new Promise((res) => setTimeout(res, delay));
+      return this.retryRequest(fn, retries - 1, delay * 2); // exponential backoff
+    }
+
+    throw error;
+  }
+}
+
   private async generateContent(
     system: string,
     prompt: string,
   ): Promise<string> {
-    const response = await this.ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `${system}\n\n${prompt}`,
-      config: {
-        temperature: 0.6,
-        maxOutputTokens: 800,
-      },
-    });
+   const response = await this.retryRequest(() =>
+      this.ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `${system}\n\n${prompt}`,
+        config: {
+          temperature: 0.6,
+          maxOutputTokens: 800,
+        },
+      }),
+    );
 
     return response.text || '';
   }
@@ -154,6 +176,26 @@ export class AiService {
     return name.replace(/["\n]/g, '').trim();
   }
 
+  async generateDetailOptimization(
+    prompt: string,
+    imageUrl?: string | null,
+  ): Promise<string> {
+    if (imageUrl) {
+      return this.generateImageContent(
+        'You are an expert Shopify SEO optimizer. Analyze the product image first, then optimize all requested Shopify product detail fields. Return valid JSON only.',
+        prompt,
+        imageUrl,
+        0.5,
+        1600,
+      );
+    }
+
+    return this.generateContent(
+      'You are an expert Shopify SEO optimizer. Optimize all requested Shopify product detail fields. Return valid JSON only.',
+      prompt,
+    );
+  }
+
   async generateProductType(prompt: string): Promise<string> {
     const type = await this.generateContent(
       'You are an expert Shopify SEO Product Type optimizer.',
@@ -212,27 +254,29 @@ export class AiService {
   ): Promise<string> {
     const image = await this.fetchImageForGemini(imageUrl);
 
-    const response = await this.ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: `${system}\n\n${prompt}` },
-            {
-              inlineData: {
-                mimeType: image.mimeType,
-                data: image.data,
-              },
+    const response = await this.retryRequest(() =>
+  this.ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: `${system}\n\n${prompt}` },
+          {
+            inlineData: {
+              mimeType: image.mimeType,
+              data: image.data,
             },
-          ],
-        },
-      ],
-      config: {
-        temperature,
-        maxOutputTokens,
+          },
+        ],
       },
-    });
+    ],
+    config: {
+      temperature,
+      maxOutputTokens,
+    },
+  }),
+);
 
     return response.text || '';
   }

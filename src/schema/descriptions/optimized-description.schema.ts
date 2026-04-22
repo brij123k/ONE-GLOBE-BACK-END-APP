@@ -9,10 +9,13 @@ export class OptimizedDescription extends Document {
   @Prop({ required: true })
   productId: string;
 
-  @Prop()
+  @Prop({ required: false })
   productImage: string;
 
-  @Prop({ required: true })
+  @Prop({ required: false })
+  title: string;
+
+  @Prop({ required: false })
   description: string;
 }
 

@@ -9,7 +9,7 @@ export class ClassicDescriptionOptimized extends Document {
   @Prop({ required: true })
   productId: string;
 
-  @Prop({ required: true })
+  @Prop({ required: false })
   oldDescription: string;
 
   @Prop({ required: true })

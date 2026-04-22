@@ -150,14 +150,14 @@ export class MetaService {
 
   const imageUrl = product.featuredMedia?.preview?.image?.url || null;
   const useImage = dto.image ?? true;
-  const useDescription = dto.description ?? true;
+  const useTitle = dto.title ?? true;
 
-  if (!useImage && !useDescription) {
-    throw new Error('At least one source must be enabled: image or description');
+  if (!useImage && !useTitle) {
+    throw new Error('At least one source must be enabled: image or title');
   }
 
-  if (useImage && !imageUrl && !useDescription) {
-    throw new Error('Product image not found. Enable description or add a featured image.');
+  if (useImage && !imageUrl && !useTitle) {
+    throw new Error('Product image not found. Enable title or add a featured image.');
   }
 
   const oldMetaDescription =
@@ -198,7 +198,7 @@ export class MetaService {
       characterCount: aiMetaDescription.length,
       image: imageUrl,
       imageAnalyzed: useImage && Boolean(imageUrl),
-      descriptionAnalyzed: useDescription,
+      titleAnalyzed: useTitle,
       optimizationRecordId: applied._id,
     };
   }
@@ -211,7 +211,7 @@ export class MetaService {
     characterCount: aiMetaDescription.length,
     image: imageUrl,
     imageAnalyzed: useImage && Boolean(imageUrl),
-    descriptionAnalyzed: useDescription,
+    titleAnalyzed: useTitle,
   };
 }
 

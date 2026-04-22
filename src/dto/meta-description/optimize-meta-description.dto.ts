@@ -13,7 +13,7 @@ export class OptimizeMetaDescriptionDto {
 
     @IsOptional()
     @IsBoolean()
-    description?: boolean;
+    title?: boolean;
 
     @IsOptional()
     @IsBoolean()
