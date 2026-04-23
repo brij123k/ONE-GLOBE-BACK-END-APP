@@ -1071,8 +1071,6 @@ export class OptimizationService {
             ? await this.aiService.generateTitleFromImage(prompt, imageUrl)
             : await this.aiService.generateTitle(prompt);
         console.log(aiTitle)
-        aiTitle = aiTitle.replace(/["']/g, '').trim();
-        console.log(aiTitle)
         if (dto.apply === true) {
             const applied = await this.applyTitleOptimization(shopId, {
                 productId: dto.productId,
