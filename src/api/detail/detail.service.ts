@@ -146,6 +146,7 @@ Source rules:
 ${sourceInstructions}
 
 Rules:
+ Do not Add resion word in title.
 - Do not invent brand names, material, color, size, or features that are not present in the included source context.
 - Make the title readable for shoppers and useful for SEO.
 - Make the description valid Shopify HTML with short paragraphs or bullet list tags.
