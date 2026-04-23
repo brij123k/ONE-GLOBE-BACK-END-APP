@@ -94,7 +94,7 @@ export class AiService {
       0.4,
       200,
     );
-
+    console.log(title)
     return title.trim();
   }
 
