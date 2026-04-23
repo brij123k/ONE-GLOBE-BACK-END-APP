@@ -95,7 +95,7 @@ export class AiService {
       200,
     );
 
-    return title.replace(/["\n]/g, '').trim();
+    return title.trim();
   }
 
   async generateDescription(prompt: string): Promise<string> {
@@ -128,7 +128,7 @@ export class AiService {
       prompt,
     );
 
-    return title.replace(/["\n]/g, '').trim();
+    return title.trim();
   }
 
   async generateMetaTitleFromImage(
@@ -143,7 +143,7 @@ export class AiService {
       200,
     );
 
-    return title.replace(/["\n]/g, '').trim();
+    return title.trim();
   }
 
   async generateMetaDescription(prompt: string): Promise<string> {
