@@ -1039,6 +1039,7 @@ export class OptimizationService {
     // 🤖 AI TITLE
     // =====================================================
     async generateAITitle(shopId: string, dto: AITitleOptimizationDto) {
+        console.log(dto,"1")
         const shop = await this.getShop(shopId);
         const productResponse = await this.shopifyService.shopifyRequest(
             shop.shopDomain,
@@ -1053,7 +1054,8 @@ export class OptimizationService {
         const imageUrl = product.featuredMedia?.preview?.image?.url || null;
         const useImage = dto.image ?? true;
         const useTitle = dto.title ?? true;
-
+        const useexamples=dto.exampleButton ?? true;
+        console.log(useexamples,"2")
         if (!useImage && !useTitle) {
             throw new BadRequestException('At least one source must be enabled: image or title');
         }
@@ -1066,7 +1068,10 @@ export class OptimizationService {
             ...dto,
             image: useImage && Boolean(imageUrl),
             title: useTitle,
+            example:useexamples,
+            examples:dto.examples,
         });
+        console.log(prompt)
         let aiTitle = useImage && imageUrl
             ? await this.aiService.generateTitleFromImage(prompt, imageUrl)
             : await this.aiService.generateTitle(prompt);

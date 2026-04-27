@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class OptimizeDetailDto {
   @IsString()
@@ -15,6 +15,14 @@ export class OptimizeDetailDto {
   @IsOptional()
   @IsBoolean()
   title?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  exampleButton?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  examples: string[]
 
   @IsOptional()
   @IsBoolean()

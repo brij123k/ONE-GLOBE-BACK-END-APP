@@ -1,4 +1,4 @@
-import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class AITitleOptimizationDto {
   @IsString()
@@ -9,10 +9,10 @@ export class AITitleOptimizationDto {
   categoryName?: string;
 
   @IsNumber()
-  minCharacters: number;
+  minCharacters?: number;
 
   @IsNumber()
-  maxCharacters: number;
+  maxCharacters?: number;
 
   @IsOptional()
   @IsBoolean()
@@ -21,6 +21,14 @@ export class AITitleOptimizationDto {
   @IsOptional()
   @IsBoolean()
   title?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  exampleButton?:boolean;
+
+  @IsOptional()
+  @IsArray()
+  examples?:string[]
 
   @IsOptional()
   @IsString()

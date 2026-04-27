@@ -25,6 +25,12 @@ export function buildTitleAIPrompt(
         : `- Use the current product title and description as the source of truth.
 - Do not use the product image as product context.`;
 
+  const hasExamples = Array.isArray(input.examples) && input.examples.length > 0;
+  const examples = hasExamples
+    ? `Use the following examples as mandatory inspiration for the title. Do not ignore them:
+- Examples: ${input.examples.join(', ')}`
+    : `Give the perfect title`;
+
   return `
 You are an expert Shopify SEO copywriter.
 
@@ -33,6 +39,7 @@ Generate ONE optimized product title only.
 Product Info:
 ${imageContext}
 ${titleContext}
+${examples}
 - Category: ${input.categoryName || 'Not provided'}
 - Vendor: ${product.vendor || 'N/A'}
 - Product Type: ${product.productType || 'N/A'}

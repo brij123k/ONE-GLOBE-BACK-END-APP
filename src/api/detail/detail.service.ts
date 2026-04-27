@@ -95,6 +95,14 @@ export class DetailService {
     const useImage = dto.image ?? true;
     const useTitle = dto.title ?? true;
     const useDescription = dto.description ?? true;
+    const useExamples = dto.exampleButton ?? true;
+    const hasExamples = Array.isArray(dto.examples) && dto.examples.length > 0;
+
+    const examplesInstruction =
+      useExamples && hasExamples
+        ? `- Use the following examples as mandatory inspiration for the optimized detail content. Do not ignore them.
+- Examples: ${dto?.examples.join(', ')}`
+        : '- No example guidance provided.';
 
     const sourceLines = [
       useTitle ? `- Current title: ${product.title || ''}` : null,
@@ -141,6 +149,7 @@ Return JSON only with this exact shape:
 
 Product data:
 ${sourceLines}
+${examplesInstruction}
 
 Source rules:
 ${sourceInstructions}
