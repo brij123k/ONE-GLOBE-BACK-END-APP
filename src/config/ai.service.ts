@@ -66,7 +66,6 @@ export class AiService {
         contents: `${system}\n\n${prompt}`,
         config: {
           temperature: 0.6,
-          maxOutputTokens: 800,
         },
       }),
     );
@@ -92,7 +91,6 @@ export class AiService {
       prompt,
       imageUrl,
       0.4,
-      200,
     );
     console.log(title)
     return title.trim();
@@ -116,7 +114,6 @@ export class AiService {
       prompt,
       imageUrl,
       0.6,
-      2000,
     );
 
     return description.trim();
@@ -140,7 +137,6 @@ export class AiService {
       prompt,
       imageUrl,
       0.6,
-      200,
     );
 
     return title.trim();
@@ -164,7 +160,6 @@ export class AiService {
       prompt,
       imageUrl,
       0.6,
-      300,
     );
 
     return description.trim();
@@ -225,7 +220,6 @@ export class AiService {
           ],
           config: {
             temperature: 0.4,
-            maxOutputTokens: 2400,
             responseMimeType: 'application/json',
             responseJsonSchema: this.detailOptimizationSchema,
           },
@@ -241,7 +235,6 @@ export class AiService {
         contents: `You are an expert Shopify SEO optimizer. Optimize all requested Shopify product detail fields. Return valid JSON only.\n\n${prompt}`,
         config: {
           temperature: 0.4,
-          maxOutputTokens: 2400,
           responseMimeType: 'application/json',
           responseJsonSchema: this.detailOptimizationSchema,
         },
@@ -293,7 +286,6 @@ export class AiService {
       ],
       config: {
         temperature: 0.3,
-        maxOutputTokens: 500,
       },
     });
 
@@ -305,7 +297,6 @@ export class AiService {
     prompt: string,
     imageUrl: string,
     temperature: number,
-    maxOutputTokens: number,
   ): Promise<string> {
     const image = await this.fetchImageForGemini(imageUrl);
 
@@ -328,7 +319,6 @@ export class AiService {
         ],
         config: {
           temperature,
-          maxOutputTokens,
         },
       }),
     );
