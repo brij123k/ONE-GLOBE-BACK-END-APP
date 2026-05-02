@@ -196,7 +196,6 @@ export class SkuService {
   }
 
 async updateSku(shopId: string, dto: UpdateSkuDto) {
-
   const shop = await this.getShop(shopId);
   await this.ensureSkuMetafieldDefinition(shop);
 
@@ -220,7 +219,6 @@ async updateSku(shopId: string, dto: UpdateSkuDto) {
         item.productId,
         item.oldSku,
       );
-
       const response = await this.shopifyRequest(
         shop.shopDomain,
         shop.accessToken,

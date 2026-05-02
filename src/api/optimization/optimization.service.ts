@@ -463,6 +463,20 @@ export class OptimizationService {
         return data.data.product;
     }
 
+    private async getProductForOptimizationStorage(
+        shop: any,
+        product: any,
+        serviceName: string,
+    ) {
+        if (serviceName !== 'sku') {
+            return product;
+        }
+
+        // SKU storage needs the full variant list, while the list queries only
+        // load the first variant for most optimization types.
+        return this.fetchProduct(shop.shopDomain, shop.accessToken, product.id);
+    }
+
     async storeProducts(shopId: string, dto: StoreOptimizationDto) {
         if (dto.filters) {
             return this.storeAllproduct(shopId, dto)
@@ -798,7 +812,11 @@ export class OptimizationService {
                 after = data.collection.products.pageInfo.endCursor;
 
                 for (const edge of edges) {
-                    const product = edge.node;
+                    const product = await this.getProductForOptimizationStorage(
+                        shop,
+                        edge.node,
+                        dto.serviceName,
+                    );
                     this.pushDocumentByService(documents, dto.serviceName, shopId, product);
                 }
             }
@@ -824,7 +842,11 @@ export class OptimizationService {
                 after = data.products.pageInfo.endCursor;
 
                 for (const edge of edges) {
-                    const product = edge.node;
+                    const product = await this.getProductForOptimizationStorage(
+                        shop,
+                        edge.node,
+                        dto.serviceName,
+                    );
                     this.pushDocumentByService(documents, dto.serviceName, shopId, product);
                 }
             }
