@@ -11,6 +11,7 @@ import type  { Response } from 'express';
 import * as crypto from 'crypto';
 import { ShopService } from './shop.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { StartupSeoAuditDto } from 'src/dto/shop/startup-seo-audit.dto';
 
 @Controller('api/shop')
 export class ShopController {
@@ -121,6 +122,11 @@ async getCategories(@Req() req) {
   async getCollections(@Req() req) {
     const { shopId } = req.user;
     return this.shopService.getCollections(shopId);
+  }
+
+  @Get('startup')
+  async startupAudit(@Query() dto: StartupSeoAuditDto) {
+    return this.shopService.generateStartupSeoAudit(dto.shopName);
   }
 
 

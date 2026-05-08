@@ -32,6 +32,12 @@ export class Shop {
 
   @Prop()
   currency: string;
+
+  @Prop({ type: Object })
+  startupSeoAudit?: any;
+
+  @Prop()
+  startupSeoAuditGeneratedAt?: Date;
 }
 
 export const ShopSchema = SchemaFactory.createForClass(Shop);
