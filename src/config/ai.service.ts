@@ -73,6 +73,27 @@ export class AiService {
     return response.text || '';
   }
 
+  async generateJsonContent(
+    system: string,
+    prompt: string,
+    responseJsonSchema: Record<string, any>,
+    temperature = 0.4,
+  ): Promise<string> {
+    const response = await this.retryRequest(() =>
+      this.ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `${system}\n\n${prompt}`,
+        config: {
+          temperature,
+          responseMimeType: 'application/json',
+          responseJsonSchema,
+        },
+      }),
+    );
+
+    return response.text || '';
+  }
+
   async generateTitle(prompt: string): Promise<string> {
     const title = await this.generateContent(
       'You are an expert Shopify SEO title optimizer.',

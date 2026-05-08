@@ -9,7 +9,7 @@ import { COLLECTION_PRODUCTS_QUERY } from 'src/graphql/collection-products.query
 import { PRODUCTS_QUERY } from 'src/graphql/products.query';
 import { COLLECTIONS_QUERY } from 'src/graphql/collections.query';
 import { CollectionResponseDto } from 'src/dto/collection-response.dto';
-import { groqClient } from 'src/config/groq.config';
+import { AiService } from 'src/config/ai.service';
 
 @Injectable()
 export class ShopService {
@@ -18,6 +18,7 @@ export class ShopService {
   constructor(
     @InjectModel(Shop.name)
     private shopModel: Model<ShopDocument>,
+    private readonly aiService: AiService,
   ) { }
 
   async createOrUpdateShop(data: CreateShopDto) {
@@ -402,168 +403,22 @@ async getProducts(shopId: string, params: any) {
       ? competitorContext.competitors
       : [];
 
-    const prompt = `You are a world-class SEO strategist, AEO
-(Answer Engine Optimization) expert, GEO
-(Generative Engine Optimization) specialist,
-and technical SEO consultant with over 15 years
-of experience in ranking ecommerce websites on
-Google, AI search engines, and generative AI
-platforms.
+    const prompt = `Act as a senior SEO consultant, AEO expert, GEO specialist, and ecommerce technical SEO auditor.
+Audit the store using the context below and return JSON only.
 
-Your task is to perform a COMPLETE, DEEP-DIVE
-SEO AUDIT of my ecommerce website from scratch.
-
-Website Details:
-- Website URL: ${storeContext.websiteUrl}
-- Brand Name: ${storeContext.brandName}
-- Business Type: ${storeContext.businessType}
-- Target Market: ${storeContext.targetMarket}
-- Main Products: ${storeContext.mainProducts.join(', ')}
-- Main Competitors: ${competitors
-      .map((competitor: any) => `${competitor.name} (${competitor.url})`)
-      .join(', ')}
-
-Store Snapshot:
+Store:
 ${JSON.stringify(storeContext, null, 2)}
 
-Competitor Research:
+Competitors:
 ${JSON.stringify(competitorContext, null, 2)}
 
-Please analyse and provide:
+Audit requirements:
+- Analyze all 12 areas: technical, on-page, homepage, collection/category, product, content/blog, E-E-A-T, AEO, GEO, off-page, conversion, local/international.
+- For each section provide: strengths, weaknesses, criticalIssues, actionableFixes, priorityLevel.
+- Be specific, practical, and brutally honest.
+- No generic advice.
 
-1. TECHNICAL SEO AUDIT
-- Page speed & Core Web Vitals analysis
-- Mobile responsiveness check
-- Crawlability & indexing issues
-- Sitemap & robots.txt review
-- SSL & security check
-- JavaScript rendering issues
-- Broken links & redirect issues
-- Canonical tag issues
-- Duplicate content issues
-- Schema markup analysis
-
-2. ON-PAGE SEO AUDIT
-- Title tags & meta descriptions
-- H1, H2, H3 heading structure
-- Keyword usage & density
-- Image alt text optimization
-- Internal linking strategy
-- URL structure analysis
-- Content quality & depth
-- Thin content pages
-
-3. HOMEPAGE SEO ANALYSIS
-- Title tag optimization
-- Meta description quality
-- H1 tag presence & quality
-- Hero banner content & keywords
-- Above the fold content
-- CTA optimization
-- Trust signals
-- Schema markup
-
-4. COLLECTION/CATEGORY PAGE AUDIT
-- URL structure
-- Keyword optimization
-- Category page content depth
-- Filter & facet indexing issues
-- Breadcrumb navigation
-- Internal linking
-- Missing SEO opportunities
-
-5. PRODUCT PAGE AUDIT
-- Product title optimization
-- Product description quality
-- Image alt text
-- Product schema markup
-- Review & rating schema
-- Duplicate content issues
-- Cross-selling opportunities
-
-6. CONTENT & BLOG AUDIT
-- Blog presence & quality
-- Content gaps analysis
-- Topical authority check
-- Keyword targeting in blogs
-- Internal linking from blogs
-- Author E-E-A-T signals
-- Missing content opportunities
-
-7. E-E-A-T ANALYSIS
-- Expertise signals
-- Experience signals
-- Authority signals
-- Trustworthiness signals
-- About page quality
-- Team page presence
-- Press & media mentions
-- Customer reviews presence
-
-8. AEO ANALYSIS
-(Answer Engine Optimization)
-- FAQ schema presence
-- Featured snippet optimization
-- Question-based content
-- Direct answer content
-- Structured data quality
-- Voice search optimization
-
-9. GEO ANALYSIS
-(Generative Engine Optimization)
-- AI search visibility
-- ChatGPT citation potential
-- Google SGE optimization
-- Perplexity visibility
-- Content structure for AI
-- Brand mention optimization
-- Knowledge panel signals
-
-10. OFF-PAGE SEO AUDIT
-- Backlink profile quality
-- Domain authority estimate
-- Brand mention analysis
-- Social proof signals
-- Marketplace presence
-- Partner & affiliate links
-
-11. CONVERSION SEO AUDIT
-- CTA placement & quality
-- Trust badges presence
-- Social proof visibility
-- Checkout flow issues
-- UX issues affecting SEO
-- Funnel optimization
-- Cart abandonment signals
-
-12. LOCAL & INTERNATIONAL SEO
-- Hreflang implementation
-- Multi-currency setup
-- International targeting
-- Regional content strategy
-- Google Business Profile
-
-For EACH section provide:
-✅ Strengths
-❌ Weaknesses
-🚨 Critical Issues
-🔧 Actionable Fixes
-📊 Priority Level (High/Medium/Low)
-
-Also provide:
-- Overall SEO Score (out of 100)
-- Quick Wins (fixes that work fast)
-- 30-60-90 Day Action Plan
-- Competitor gap analysis
-- Keyword opportunities
-- Content calendar suggestions
-
-Be brutally honest.
-Give specific, practical recommendations.
-Do not give generic advice.
-Think like a senior SEO consultant.
-
-Return valid JSON only with this structure:
+Return valid JSON only with this exact structure:
 {
   "overallSeoScore": number,
   "TechnicalSEO":number,
@@ -762,21 +617,45 @@ Rules:
     let audit: any;
 
     try {
-      const competitorResponse = await groqClient.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are a precise ecommerce research analyst. Return JSON only.',
+      const competitorRaw = await this.aiService.generateJsonContent(
+        'You are a precise ecommerce research analyst. Return JSON only.',
+        competitorPrompt,
+        {
+          type: 'object',
+          properties: {
+            brandName: { type: 'string' },
+            websiteUrl: { type: 'string' },
+            businessType: { type: 'string' },
+            targetMarket: { type: 'string' },
+            mainProducts: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+            competitors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  url: { type: 'string' },
+                  whyRelevant: { type: 'string' },
+                },
+                required: ['name', 'url', 'whyRelevant'],
+              },
+            },
           },
-          { role: 'user', content: competitorPrompt },
-        ],
-        temperature: 0.2,
-      });
+          required: [
+            'brandName',
+            'websiteUrl',
+            'businessType',
+            'targetMarket',
+            'mainProducts',
+            'competitors',
+          ],
+        },
+        0.2,
+      );
 
-      const competitorRaw =
-        competitorResponse.choices?.[0]?.message?.content || '';
       competitorContext = this.parseJsonResponse(competitorRaw);
 
       const auditPrompt = this.buildSeoAuditPrompt(
@@ -796,28 +675,205 @@ Rules:
         competitorContext,
       );
 
-      const auditResponse = await groqClient.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are a senior SEO consultant. Return valid JSON only.',
+      const auditRaw = await this.aiService.generateJsonContent(
+        'You are a senior SEO consultant. Return valid JSON only.',
+        auditPrompt,
+        {
+          type: 'object',
+          properties: {
+            overallSeoScore: { type: 'number' },
+            TechnicalSEO: { type: 'number' },
+            'On-PageSEO': { type: 'number' },
+            HomepageSEO: { type: 'number' },
+            ProductPageSEO: { type: 'number' },
+            CollectionSEO: { type: 'number' },
+            ConversionSEO: { type: 'number' },
+            seoAudit: {
+              type: 'object',
+              properties: {
+                technicalSeoAudit: {
+                  type: 'object',
+                  properties: {
+                    strengths: { type: 'array', items: { type: 'string' } },
+                    weaknesses: { type: 'array', items: { type: 'string' } },
+                    criticalIssues: { type: 'array', items: { type: 'string' } },
+                    actionableFixes: { type: 'array', items: { type: 'string' } },
+                    priorityLevel: { type: 'string' },
+                  },
+                  required: ['strengths', 'weaknesses', 'criticalIssues', 'actionableFixes', 'priorityLevel'],
+                },
+                onPageSeoAudit: {
+                  type: 'object',
+                  properties: {
+                    strengths: { type: 'array', items: { type: 'string' } },
+                    weaknesses: { type: 'array', items: { type: 'string' } },
+                    criticalIssues: { type: 'array', items: { type: 'string' } },
+                    actionableFixes: { type: 'array', items: { type: 'string' } },
+                    priorityLevel: { type: 'string' },
+                  },
+                  required: ['strengths', 'weaknesses', 'criticalIssues', 'actionableFixes', 'priorityLevel'],
+                },
+                homepageSeoAnalysis: {
+                  type: 'object',
+                  properties: {
+                    strengths: { type: 'array', items: { type: 'string' } },
+                    weaknesses: { type: 'array', items: { type: 'string' } },
+                    criticalIssues: { type: 'array', items: { type: 'string' } },
+                    actionableFixes: { type: 'array', items: { type: 'string' } },
+                    priorityLevel: { type: 'string' },
+                  },
+                  required: ['strengths', 'weaknesses', 'criticalIssues', 'actionableFixes', 'priorityLevel'],
+                },
+                collectionCategoryPageAudit: {
+                  type: 'object',
+                  properties: {
+                    strengths: { type: 'array', items: { type: 'string' } },
+                    weaknesses: { type: 'array', items: { type: 'string' } },
+                    criticalIssues: { type: 'array', items: { type: 'string' } },
+                    actionableFixes: { type: 'array', items: { type: 'string' } },
+                    priorityLevel: { type: 'string' },
+                  },
+                  required: ['strengths', 'weaknesses', 'criticalIssues', 'actionableFixes', 'priorityLevel'],
+                },
+                productPageAudit: {
+                  type: 'object',
+                  properties: {
+                    strengths: { type: 'array', items: { type: 'string' } },
+                    weaknesses: { type: 'array', items: { type: 'string' } },
+                    criticalIssues: { type: 'array', items: { type: 'string' } },
+                    actionableFixes: { type: 'array', items: { type: 'string' } },
+                    priorityLevel: { type: 'string' },
+                  },
+                  required: ['strengths', 'weaknesses', 'criticalIssues', 'actionableFixes', 'priorityLevel'],
+                },
+                contentBlogAudit: {
+                  type: 'object',
+                  properties: {
+                    strengths: { type: 'array', items: { type: 'string' } },
+                    weaknesses: { type: 'array', items: { type: 'string' } },
+                    criticalIssues: { type: 'array', items: { type: 'string' } },
+                    actionableFixes: { type: 'array', items: { type: 'string' } },
+                    priorityLevel: { type: 'string' },
+                  },
+                  required: ['strengths', 'weaknesses', 'criticalIssues', 'actionableFixes', 'priorityLevel'],
+                },
+                eeatAnalysis: {
+                  type: 'object',
+                  properties: {
+                    strengths: { type: 'array', items: { type: 'string' } },
+                    weaknesses: { type: 'array', items: { type: 'string' } },
+                    criticalIssues: { type: 'array', items: { type: 'string' } },
+                    actionableFixes: { type: 'array', items: { type: 'string' } },
+                    priorityLevel: { type: 'string' },
+                  },
+                  required: ['strengths', 'weaknesses', 'criticalIssues', 'actionableFixes', 'priorityLevel'],
+                },
+                aeoAnalysis: {
+                  type: 'object',
+                  properties: {
+                    strengths: { type: 'array', items: { type: 'string' } },
+                    weaknesses: { type: 'array', items: { type: 'string' } },
+                    criticalIssues: { type: 'array', items: { type: 'string' } },
+                    actionableFixes: { type: 'array', items: { type: 'string' } },
+                    priorityLevel: { type: 'string' },
+                  },
+                  required: ['strengths', 'weaknesses', 'criticalIssues', 'actionableFixes', 'priorityLevel'],
+                },
+                geoAnalysis: {
+                  type: 'object',
+                  properties: {
+                    strengths: { type: 'array', items: { type: 'string' } },
+                    weaknesses: { type: 'array', items: { type: 'string' } },
+                    criticalIssues: { type: 'array', items: { type: 'string' } },
+                    actionableFixes: { type: 'array', items: { type: 'string' } },
+                    priorityLevel: { type: 'string' },
+                  },
+                  required: ['strengths', 'weaknesses', 'criticalIssues', 'actionableFixes', 'priorityLevel'],
+                },
+                offPageSeoAudit: {
+                  type: 'object',
+                  properties: {
+                    strengths: { type: 'array', items: { type: 'string' } },
+                    weaknesses: { type: 'array', items: { type: 'string' } },
+                    criticalIssues: { type: 'array', items: { type: 'string' } },
+                    actionableFixes: { type: 'array', items: { type: 'string' } },
+                    priorityLevel: { type: 'string' },
+                  },
+                  required: ['strengths', 'weaknesses', 'criticalIssues', 'actionableFixes', 'priorityLevel'],
+                },
+                conversionSeoAudit: {
+                  type: 'object',
+                  properties: {
+                    strengths: { type: 'array', items: { type: 'string' } },
+                    weaknesses: { type: 'array', items: { type: 'string' } },
+                    criticalIssues: { type: 'array', items: { type: 'string' } },
+                    actionableFixes: { type: 'array', items: { type: 'string' } },
+                    priorityLevel: { type: 'string' },
+                  },
+                  required: ['strengths', 'weaknesses', 'criticalIssues', 'actionableFixes', 'priorityLevel'],
+                },
+                localInternationalSeo: {
+                  type: 'object',
+                  properties: {
+                    strengths: { type: 'array', items: { type: 'string' } },
+                    weaknesses: { type: 'array', items: { type: 'string' } },
+                    criticalIssues: { type: 'array', items: { type: 'string' } },
+                    actionableFixes: { type: 'array', items: { type: 'string' } },
+                    priorityLevel: { type: 'string' },
+                  },
+                  required: ['strengths', 'weaknesses', 'criticalIssues', 'actionableFixes', 'priorityLevel'],
+                },
+              },
+              required: [
+                'technicalSeoAudit',
+                'onPageSeoAudit',
+                'homepageSeoAnalysis',
+                'collectionCategoryPageAudit',
+                'productPageAudit',
+                'contentBlogAudit',
+                'eeatAnalysis',
+                'aeoAnalysis',
+                'geoAnalysis',
+                'offPageSeoAudit',
+                'conversionSeoAudit',
+                'localInternationalSeo',
+              ],
+            },
+            quickWins: { type: 'array', items: { type: 'string' } },
+            actionPlan30_60_90: {
+              type: 'object',
+              properties: {
+                day30: { type: 'array', items: { type: 'string' } },
+                day60: { type: 'array', items: { type: 'string' } },
+                day90: { type: 'array', items: { type: 'string' } },
+              },
+              required: ['day30', 'day60', 'day90'],
+            },
+            competitorGapAnalysis: { type: 'array', items: { type: 'string' } },
+            keywordOpportunities: { type: 'array', items: { type: 'string' } },
+            contentCalendarSuggestions: { type: 'array', items: { type: 'string' } },
           },
-          { role: 'user', content: auditPrompt },
-        ],
-        temperature: 0.35,
-      });
+          required: [
+            'overallSeoScore',
+            'TechnicalSEO',
+            'On-PageSEO',
+            'HomepageSEO',
+            'ProductPageSEO',
+            'CollectionSEO',
+            'ConversionSEO',
+            'seoAudit',
+            'quickWins',
+            'actionPlan30_60_90',
+            'competitorGapAnalysis',
+            'keywordOpportunities',
+            'contentCalendarSuggestions',
+          ],
+        },
+        0.35,
+      );
 
-      const auditRaw = auditResponse.choices?.[0]?.message?.content || '';
       audit = this.parseJsonResponse(auditRaw);
     } catch (error: any) {
-      if (error?.status === 401) {
-        throw new BadRequestException(
-          'Groq API authentication failed. Please check GROQ_API_KEY and make sure it is a valid active Groq key.',
-        );
-      }
-
       throw error;
     }
 
